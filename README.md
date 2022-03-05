@@ -1,2 +1,2 @@
 # img2nc
-Convert planetary dem data into NetCDF
+Convert planetary DEM data into NetCDF
