@@ -4,6 +4,13 @@ module img2nc
    use read_img
    use string_operation
 
+   type Tile
+      private
+      real(real64), allocatable :: lon(:), lat(:)
+      real(real64), allocatable :: data(:,:)
+      real(real64) :: step_lon, step_lat
+   end type Tile
+
    type LunarNC
       private
       ! Internal variable
@@ -174,6 +181,24 @@ contains
 
       return
    end subroutine lnc_close_nc
+
+   subroutine halve_shrink(input, output)
+      integer(int32), intent(in) :: input(:,:)
+      integer(int32), intent(out) ::  output(:,:)
+      integer(int32) :: i, j, ii, jj, nx, ny
+
+      nx = size(input, dim=1)
+      ny = size(input, dim=2)
+
+      do j = 1, ny, 2
+         do i = 1, nx, 2
+            ii = ceiling(i/2.)
+            jj = ceiling(j/2.)
+            output(ii,jj) = nint( (input(i,j)+input(i+1,j)+input(i,j+1)+input(i+1,j+1)) / 4.0 )
+         end do
+      end do
+      return
+   end subroutine halve_shrink
 
    ! netCDFの関数の引数を受け取るsubroutineを用意する
    subroutine check(status)
