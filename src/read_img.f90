@@ -41,7 +41,7 @@ module read_img
       private
       character(len=256) :: infile_img
       integer(int32) :: nlon, nlat
-      integer(int16), allocatable :: dem(:,:)
+      integer(int16), public, allocatable :: dem(:,:)
       real(real64), public :: west_lon, east_lon, south_lat, north_lat
       type(label), public :: label
    contains
@@ -51,7 +51,7 @@ module read_img
       procedure :: read_lbl => image_read_lbl
       procedure :: load_image => image_load_img
       procedure :: size_dem => image_size_dem
-      procedure :: load_data => image_load_data
+      ! procedure :: load_data => image_load_data
 
    end type Image
 
@@ -73,7 +73,7 @@ contains
 
    subroutine label_read_lbl(self)
       class(label) :: self
-      integer :: unit, index
+      integer :: unit
       character(len=256) :: str, symbol, object
 
       open(newunit=unit, file=self%infile_lbl, form='formatted', access='stream',status='old')
@@ -161,7 +161,7 @@ contains
       class(image) :: self
       character(len=256) :: code
 
-      call self%label%set_name(trim(code))
+      ! call self%label%set_name(trim(code))
 
       self%infile_img = trim(code) // '.img'
       return
@@ -175,8 +175,7 @@ contains
 
    subroutine image_load_img(self)
       class(image) :: self
-      character(len=256) :: filename
-      integer :: index, unit
+      integer :: unit
       integer :: i, j, jj
       integer(int16) :: val
       character(len=100) :: errmsg
@@ -234,12 +233,12 @@ contains
       size_dem = size(self%dem, dim)
    end function image_size_dem
 
-   subroutine image_load_data(self, data)
-      class(image) :: self
-      real(real64), intent(out) :: data(:,:)
+   ! subroutine image_load_data(self, data)
+   !    class(image) :: self
+   !    real(real64), intent(out) :: data(:,:)
 
-      data(:,:) = dble(self%dem(:,:))
-   end subroutine image_load_data
+   !    data(:,:) = dble(self%dem(:,:))
+   ! end subroutine image_load_data
 
    ! ビットシフトにより16bit整数型のエンディアンを変換する関数
    integer(int16) function swap16(value)
