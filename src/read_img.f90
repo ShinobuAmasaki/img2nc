@@ -1,5 +1,6 @@
 module read_img
    use iso_fortran_env
+   use read_lbl
    implicit none
 
    type Image      
