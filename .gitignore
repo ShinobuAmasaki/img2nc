@@ -33,3 +33,6 @@
 
 # for VSCode
 *.code-workspace
+
+# Test
+test_*.f90
