@@ -3,7 +3,7 @@ module read_img
    use read_lbl
    implicit none
 
-   type Image      
+   type Image
       private
       character(len=256)   :: filename
       integer(int32)       :: nlon, nlat
@@ -11,7 +11,7 @@ module read_img
 
       integer(int16), public, allocatable :: dem(:,:)
       
-      type(label) :: label
+      type(label), public :: label
 
    contains
       ! Procedure
@@ -29,7 +29,7 @@ contains
       character(len=256) :: code
 
       self%filename = trim(code) // '.img'
-      
+      call self%label%set_name(code)
       return
    end subroutine image_set_name
 
@@ -47,9 +47,9 @@ contains
       character(len=100) :: errmsg
 
       ! 経度方向のデータ数を構造体変数nlonに代入する。
-      self%nlon = self%label%line_samples
+      self%nlon = self%label%get_nlon()
       ! 緯度方向のデータ数を構造体変数nlatに代入する。
-      self%nlat = self%label%lines
+      self%nlat = self%label%get_nlat()
 
       ! 東西南北の端の経緯度を、変数labelから取得して、構造体変数に代入する。
       self%east_lon = self%label%get_east()

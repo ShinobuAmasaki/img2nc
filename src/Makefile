@@ -5,6 +5,9 @@ LIBS	=	-lnetcdff
 WORN	=	-Wall
 FFLAGS	=	$(INCLUDE) $(LDFLAGS) $(LIBS) $(WORN)
 
+read_lbl.o: read_lbl.f90
+	$(FC) -c $(WORN) read_lbl.f90
+
 read_img.o: read_img.f90
 	$(FC) -c $(WORN) read_img.f90
 
@@ -14,8 +17,11 @@ string_operation.o: string_operation.f90
 img2nc.o: img2nc.f90
 	$(FC) -c $(FFLAGS) img2nc.f90
 
-main:	read_img.o string_operation.o img2nc.o main.f90
+main:	read_lbl.o read_img.o string_operation.o img2nc.o main.f90
 	$(FC) -o a.out $(FFLAGS) read_img.o string_operation.o img2nc.o main.f90
 
+test_1: read_lbl.o read_img.o string_operation.o img2nc.o test_1.f90
+	$(FC) -o a.out $(FFLAGS) read_lbl.o read_img.o string_operation.o img2nc.o test_1.f90
+
 clean:
-	rm -rf *.o *.mod
+	rm -rf *.o *.mod a.out

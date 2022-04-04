@@ -33,6 +33,8 @@ module read_lbl
       procedure :: get_west => label_get_west_lon
       procedure :: get_south => label_get_south_lat
       procedure :: get_north => label_get_north_lat
+      procedure :: get_nlon => label_get_line_samples
+      procedure :: get_nlat => label_get_lines
       
    end type Label
 
@@ -138,5 +140,21 @@ contains
       lat = self%north_lat
       return
    end function label_get_north_lat
+
+   function label_get_line_samples(self) result(line_samples)
+      class(label) :: self
+      integer(int32) :: line_samples
+
+      line_samples = self%line_samples
+      return
+   end function label_get_line_samples
+
+   function label_get_lines(self) result(lines)
+      class(label) :: self
+      integer(int32) :: lines
+
+      lines = self%lines
+      return
+   end function label_get_lines
 
 end module read_lbl
