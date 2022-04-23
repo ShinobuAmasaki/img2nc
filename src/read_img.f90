@@ -3,6 +3,15 @@ module read_img
    use read_lbl
    implicit none
 
+   type Tile
+      private
+      real(real64), allocatable :: lon(:), lat(:)
+      real(real64), allocatable :: data(:,:)
+
+   contains
+      procedure :: halve => tile_halve_shrink
+   end type Tile
+
    type Image
       private
       character(len=256)   :: filename
@@ -19,6 +28,7 @@ module read_img
       procedure :: read_lbl => image_read_lbl
       procedure :: load_image => image_load_img
       procedure :: size_dem => image_size_dem
+      procedure :: img2tile => image_convert_to_tile
 
    end type Image
 
@@ -98,6 +108,94 @@ contains
 
       size_dem = size(self%dem, dim)
    end function image_size_dem
+
+   function image_convert_to_tile(self) result(single)
+      class(image) :: self
+      type(Tile) :: single
+      integer :: i, j 
+      integer(int32) :: nlon, nlat
+      real(real64) :: west, east, south, north, step_lon, step_lat
+
+      !経緯度の標本数を変数に代入する。
+      nlon = self%nlon
+      nlat = self%nlat
+      
+      !領域の経緯度を変数に代入する。
+      west = self%west_lon
+      east = self%east_lon
+      south = self%south_lat
+      north = self%north_lat
+
+      !経緯度の差分を変数に代入する。
+      step_lon = (east - west)/dble(nlon)
+      step_lat = (north - south)/dble(nlat)
+
+      !タイルの経度配列と緯度配列を割り付ける。
+      allocate(single%lon(nlon), single%lat(nlat))
+      ! 経度の配列に値を代入する。
+      do i = 1, nlon
+         single%lon(i) = step_lon*(i-1) + west
+      end do
+      ! 緯度の配列に値を代入する。
+      do j = 1, nlat
+         single%lat(j) = step_lat*(j-1) + south
+      end do
+
+      !データ配列の定義
+      allocate(single%data(nlon, nlat))
+      do j = 1, nlat
+         do i = 1, nlon
+            single%data(i,j) = self%dem(i,j)
+         end do
+      end do 
+
+   end function image_convert_to_tile
+
+! ----------------------------------------------------- !
+   subroutine tile_halve_shrink(self))
+      class(Tile) :: self
+      integer(int32), allocatable :: work_lon(:), work_lat(:) work(:,:)
+      integer(int32) :: i, j, ii, jj, nx, ny, nx_h, ny_h
+
+      !タイルのデータの大きさを変数に代入する。
+      nx = size(self%data, dim=1)
+      ny = size(self%data, dim=2)
+      nx_h = nx / 2
+      ny_h = ny / 2
+
+      !work配列を割り付けてに入力配列をコピーする。
+      allocate(work_lon(nx), work_lat(ny), work(nx,ny))
+      work_lon(1:nx) = self%lon(1:nx)
+      work_lat(1:ny) = self%lat(1:ny)
+      work(1:nx,1:ny) = self%data(1:nx,1:ny) 
+
+      !タイルの割り付けを解放し、新たに半分のサイズで割り付ける。
+      deallocate(self%lon, self%lat, self%data)
+      allocate(self%lon(nx_h), self%lat(ny_h), self%data(nx_h,ny_h))
+
+      ! work配列からタイルへコピーする。
+      do j = 1, ny, 2
+         do i = 1, nx, 2
+            ii = ceiling(i/2.)
+            jj = ceiling(j/2.)
+
+            !経緯度を間引きして代入する。
+            self%lon(ii) = work_lon(i)
+            self%lat(jj) = work_lat(j)
+            !4点のデータを平均してタイルに代入する。
+            self%data(ii,jj) = nint( (work(i,j)+work(i+1,j)+work(i,j+1)+work(i+1,j+1)) / 4.0 )
+
+         end do
+      end do
+      
+      !work配列の割り付けを解放する。
+      deallocate(work_lon, work_lat, work)
+
+      return
+   end subroutine tile_halve_shrink
+
+
+! ----------------------------------------------------- !
 
    ! ビットシフトにより16bit整数型のエンディアンを変換する関数
    integer(int16) function swap16(value)
