@@ -23,7 +23,6 @@ module img2nc
    contains
 
       procedure :: set_name => lnc_set_name_from_string
-      ! procedure :: set_length => lnc_set_length_of_dim
       procedure :: set_length => lnc_set_length_from_tile
       procedure :: set_step => lnc_set_step
       procedure :: set_grid => lnc_set_grid_from_tile
@@ -36,17 +35,6 @@ module img2nc
    end type LunarNC
 
 contains
-
-   ! subroutine lnc_set_name_from_image(self, img)
-   !    class(LunarNC) :: self
-   !    type(Image), intent(in) :: img
-   !    character(len=256) :: label_name
-
-   !    call img%label%get_name(label_name)
-
-   !    self%outfile = trim(change_extension(label_name, 'nc'))
-   !    return
-   ! end subroutine lnc_set_name_from_image
       
    subroutine lnc_set_name_from_string(self, code)
       class(LunarNC) :: self
@@ -57,16 +45,16 @@ contains
       return
    end subroutine lnc_set_name_from_string
    
-   subroutine lnc_set_length_of_dim(self, img)
-      class(LunarNC) :: self
-      type(Image), intent(in) :: img
+   ! subroutine lnc_set_length_of_dim(self, img)
+   !    class(LunarNC) :: self
+   !    type(Image), intent(in) :: img
 
-      self%nx = img%size_dem(dim=1)
-      self%ny = img%size_dem(dim=2)
-      self%nz = 1
+   !    self%nx = img%size_dem(dim=1)
+   !    self%ny = img%size_dem(dim=2)
+   !    self%nz = 1
 
-      return
-   end subroutine lnc_set_length_of_dim
+   !    return
+   ! end subroutine lnc_set_length_of_dim
 
    subroutine lnc_set_length_from_tile(self, single)
       class(LunarNC) :: self
@@ -78,37 +66,51 @@ contains
 
    end subroutine lnc_set_length_from_tile
 
-   subroutine lnc_set_step(self, img)
+   ! subroutine lnc_set_step(self, img)
+   !    class(LunarNC) :: self
+   !    type(Image), intent(in) :: img
+   !    integer(int32) :: east, west, north, south
+
+   !    east = nint(img%label%get_east())
+   !    west = nint(img%label%get_west())
+   !    north = nint(img%label%get_north())
+   !    south = nint(img%label%get_south())
+
+
+   !    self%step_lon = (dble(east) - dble(west))/4096d0
+   !    self%step_lat = (dble(north) - dble(south))/4096d0
+   ! end subroutine lnc_set_step
+
+   subroutine lnc_set_step_from_tile(self, single)
       class(LunarNC) :: self
-      type(Image), intent(in) :: img
+      type(Tile), intent(in) :: single
       integer(int32) :: east, west, north, south
 
-      east = nint(img%label%get_east())
-      west = nint(img%label%get_west())
-      north = nint(img%label%get_north())
-      south = nint(img%label%get_south())
+      east = single%east_lon
+      west = single%west_lon
+      south = single%south_lat
+      north = single%north_lat
 
+      self%step_lon = (dble(east) - dble(west))/dble(self%nx)
+      self%step_lat = (dble(north) - dble(south))/dble(self%ny)
+   end subroutine lnc_set_step_from_tile
 
-      self%step_lon = (dble(east) - dble(west))/4096d0
-      self%step_lat = (dble(north) - dble(south))/4096d0
-   end subroutine lnc_set_step
+   ! subroutine lnc_set_grid(self,img)
+   !    class(LunarNC) :: self
+   !    type(Image) :: img
+   !    integer(int32) :: i
 
-   subroutine lnc_set_grid(self,img)
-      class(LunarNC) :: self
-      type(Image) :: img
-      integer(int32) :: i
+   !    allocate(self%lon(self%nx), self%lat(self%ny))
 
-      allocate(self%lon(self%nx), self%lat(self%ny))
+   !    do i = 1, self%nx
+   !       self%lon(i) = self%step_lon*(i-1) + dble(nint(img%west_lon))
+   !    end do
 
-      do i = 1, self%nx
-         self%lon(i) = self%step_lon*(i-1) + dble(nint(img%west_lon))
-      end do
+   !    do i = 1, self%ny
+   !       self%lat(i) = self%step_lat*(i-1) + dble(nint(img%south_lat))
+   !    end do
 
-      do i = 1, self%ny
-         self%lat(i) = self%step_lat*(i-1) + dble(nint(img%south_lat))
-      end do
-
-   end subroutine lnc_set_grid
+   ! end subroutine lnc_set_grid
    
    subroutine lnc_set_grid_from_tile(self,single)
       class(LunarNC) :: self
@@ -118,11 +120,13 @@ contains
       allocate(self%lon(self%nx), self%lat(self%ny))
 
       do i = 1, self%nx
-         self%lon(i) = single%lon(i)
+         ! self%lon(i) = single%lon(i)
+         self%lon(i) = self%step_lon*(i-1) + dble(nint(single%west_lon))
       end do
 
       do i = 1, self%ny
-         self%lat(i) = single%lat(i)
+         ! self%lat(i) = single%lat(i)
+         self%lat(i) = self%step_lat*(i-1) + dble(nint(single%south_lat))
       end do
 
    end subroutine lnc_set_grid_from_tile
@@ -151,21 +155,21 @@ contains
 
    end subroutine lnc_define_nc
 
-   subroutine lnc_load_data_nc(self, img)
-      class(LunarNC) :: self
-      type(Image) :: img
+   ! subroutine lnc_load_data_nc(self, img)
+   !    class(LunarNC) :: self
+   !    type(Image) :: img
 
-      allocate(self%data(self%nx, self%ny))
-      ! self%data(1:self%nx,1:self%ny) = dble(img%dem(1:self%nx,1:self%ny))
-      ! self%data(:,:) = dble(img%dem(:,:))
-      do j = 1, self%ny
-         do i = 1, self%nx
-            self%data(i,j) = dble(img%dem(i,j))
-         end do
-      end do
+   !    allocate(self%data(self%nx, self%ny))
+   !    ! self%data(1:self%nx,1:self%ny) = dble(img%dem(1:self%nx,1:self%ny))
+   !    ! self%data(:,:) = dble(img%dem(:,:))
+   !    do j = 1, self%ny
+   !       do i = 1, self%nx
+   !          self%data(i,j) = dble(img%dem(i,j))
+   !       end do
+   !    end do
 
-      return
-   end subroutine lnc_load_data_nc
+   !    return
+   ! end subroutine lnc_load_data_nc
    
    subroutine lnc_load_data_nc_from_tile(self, single)
       class(LunarNC) :: self
