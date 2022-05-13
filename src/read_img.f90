@@ -3,9 +3,11 @@ module read_img
    use read_lbl
    implicit none
 
+   integer(int32) :: samples=4096
+
    type Tile
       private
-      real(real64),public, allocatable :: lon(:), lat(:)
+      integer(int32), public, :: west_lon, east_lon, south_lat, north_lat
       integer(int16), public, allocatable :: data(:,:)
    contains
       procedure :: halve => tile_halve_shrink
@@ -24,7 +26,6 @@ module read_img
       procedure :: load_image => image_load_img
       procedure :: size_dem => image_size_dem
       procedure :: img2tile => image_convert_to_tile
-
    end type Image
 
 contains
@@ -109,32 +110,17 @@ contains
       type(Tile) :: single
       integer :: i, j 
       integer(int32) :: nlon, nlat
-      real(real64) :: west, east, south, north, step_lon, step_lat
+      ! real(real64) :: west, east, south, north, step_lon, step_lat
 
       !経緯度の標本数を変数に代入する。
       nlon = self%nlon
       nlat = self%nlat
       
-      !領域の経緯度を変数に代入する。
-      west = self%west_lon
-      east = self%east_lon
-      south = self%south_lat
-      north = self%north_lat
-
-      !経緯度の差分を変数に代入する。
-      step_lon = (east - west)/dble(nlon)
-      step_lat = (north - south)/dble(nlat)
-
-      !タイルの経度配列と緯度配列を割り付ける。
-      allocate(single%lon(nlon), single%lat(nlat))
-      ! 経度の配列に値を代入する。
-      do i = 1, nlon
-         single%lon(i) = step_lon*(i-1) + west
-      end do
-      ! 緯度の配列に値を代入する。
-      do j = 1, nlat
-         single%lat(j) = step_lat*(j-1) + south
-      end do
+      !領域端の経緯度を変数に代入する。
+      single%west_lon = self%west_lon
+      single%east_lon = self%east_lon
+      single%south_lat = self%south_lat
+      single%north_lat = self%north_lat
 
       !データ配列の定義
       allocate(single%data(nlon, nlat))
@@ -190,12 +176,6 @@ contains
       return
    end subroutine tile_halve_shrink
 
-   ! subroutine tile_array_join(array, single)
-   !    type(Tile), intent(in) :: array(:,:)
-   !    type(Tile), allocatable, intent(out) :: single
-
-   ! end subroutine tile_array_join  
-
    function size_of_tile_array(array, dim) result(total)
       type(Tile), intent(in) :: array(:,:)
       integer(int32), intent(in) :: dim
@@ -214,7 +194,6 @@ contains
       
       end do
    end function size_of_tile_array
-
 
 ! ----------------------------------------------------- !
 
