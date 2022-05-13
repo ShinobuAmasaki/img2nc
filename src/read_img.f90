@@ -5,9 +5,8 @@ module read_img
 
    type Tile
       private
-      real(real64), allocatable :: lon(:), lat(:)
-      real(real64), allocatable :: data(:,:)
-
+      real(real64),public, allocatable :: lon(:), lat(:)
+      integer(int16), public, allocatable :: data(:,:)
    contains
       procedure :: halve => tile_halve_shrink
    end type Tile
@@ -17,13 +16,9 @@ module read_img
       character(len=256)   :: filename
       integer(int32)       :: nlon, nlat
       real(real64), public :: west_lon, east_lon, south_lat, north_lat
-
-      integer(int16), public, allocatable :: dem(:,:)
-      
+      integer(int16), public, allocatable :: dem(:,:) 
       type(label), public :: label
-
    contains
-      ! Procedure
       procedure :: set_name => image_set_name
       procedure :: read_lbl => image_read_lbl
       procedure :: load_image => image_load_img
@@ -152,9 +147,10 @@ contains
    end function image_convert_to_tile
 
 ! ----------------------------------------------------- !
-   subroutine tile_halve_shrink(self))
+   subroutine tile_halve_shrink(self)
       class(Tile) :: self
-      integer(int32), allocatable :: work_lon(:), work_lat(:) work(:,:)
+      real(real64), allocatable ::  work_lon(:), work_lat(:)
+      integer(int32), allocatable :: work(:,:)
       integer(int32) :: i, j, ii, jj, nx, ny, nx_h, ny_h
 
       !タイルのデータの大きさを変数に代入する。
@@ -193,6 +189,31 @@ contains
 
       return
    end subroutine tile_halve_shrink
+
+   ! subroutine tile_array_join(array, single)
+   !    type(Tile), intent(in) :: array(:,:)
+   !    type(Tile), allocatable, intent(out) :: single
+
+   ! end subroutine tile_array_join  
+
+   function size_of_tile_array(array, dim) result(total)
+      type(Tile), intent(in) :: array(:,:)
+      integer(int32), intent(in) :: dim
+      integer(int32) :: k, n, total
+
+      total = 0
+      n = size(array, dim=dim)
+
+      do k = 1, n
+      
+         if (dim == 1) then
+            total = total + size(array(k,1)%data, dim)
+         else if (dim == 2) then
+            total = total + size(array(1,k)%data, dim)
+         end if
+      
+      end do
+   end function size_of_tile_array
 
 
 ! ----------------------------------------------------- !
