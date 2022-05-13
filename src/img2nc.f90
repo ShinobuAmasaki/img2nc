@@ -24,7 +24,7 @@ module img2nc
 
       procedure :: set_name => lnc_set_name_from_string
       procedure :: set_length => lnc_set_length_from_tile
-      procedure :: set_step => lnc_set_step
+      procedure :: set_step => lnc_set_step_from_tile
       procedure :: set_grid => lnc_set_grid_from_tile
       procedure :: define_nc => lnc_define_nc
       procedure :: load_data => lnc_load_data_nc_from_tile
@@ -121,12 +121,12 @@ contains
 
       do i = 1, self%nx
          ! self%lon(i) = single%lon(i)
-         self%lon(i) = self%step_lon*(i-1) + dble(nint(single%west_lon))
+         self%lon(i) = self%step_lon*(i-1) + dble(single%west_lon)
       end do
 
       do i = 1, self%ny
          ! self%lat(i) = single%lat(i)
-         self%lat(i) = self%step_lat*(i-1) + dble(nint(single%south_lat))
+         self%lat(i) = -self%step_lat*(i-1) + dble(single%north_lat)
       end do
 
    end subroutine lnc_set_grid_from_tile
@@ -177,8 +177,8 @@ contains
 
       allocate(self%data(self%nx, self%ny))
 
-      do j = 1, self%ny
-         do i = 1, self%nx
+      do i = 1, self%nx
+         do j = 1, self%ny
             self%data(i,j) = dble(single%data(i,j))
          end do
       end do

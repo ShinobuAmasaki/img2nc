@@ -9,7 +9,7 @@ program four_tiles
    character(len=256) :: tiles(2,2)
    integer(int32) :: i, j, nlon, nlat
    integer(int32) :: start_i, end_i, start_j, end_j, ii, jj
-   integer(int32) :: samples=4096
+   ! integer(int32) :: samples=4096
 
    tiles(1,1) = '/home/shin/WORK/dat/DTM_MAP_01_N51E350N50E351SC'
    tiles(2,1) = '/home/shin/WORK/dat/DTM_MAP_01_N51E351N50E352SC'
@@ -45,7 +45,12 @@ program four_tiles
    nlon = size_of_tile_array(array, 1)
    nlat = size_of_tile_array(array, 2)
 
-   allocate(single%lon(nlon), single%lat(nlat), single%data(nlon, nlat))
+   allocate(single%data(nlon, nlat))
+
+   single%west_lon = array(1,1)%west_lon
+   single%east_lon = array(2,2)%east_lon
+   single%south_lat = array(2,2)%south_lat
+   single%north_lat = array(1,1)%north_lat
 
    do i = 1, size(array,1)
       start_i = 1 + (i-1)*samples
@@ -53,20 +58,6 @@ program four_tiles
       do j = 1, size(array,2)
          start_j = 1 + (j-1)*samples
          end_j = j*samples
-
-         ! 経度の入力（第1行のみ）
-         if (j == 1) then
-            single%lon(start_i:end_i) = array(i,j)%lon(1:samples)
-            ! print *, start_j, single%lon(start_j), single%lon(end_j)
-         end if
-
-         ! 緯度の入力（第1列のみ）
-         if (i == 1) then
-            do jj = 1, samples
-               single%lat(end_j-jj+1) = array(i,j)%lat(jj)
-            end do
-         end if
-         
 
          do ii = 1, samples
             do jj = 1, samples
@@ -77,13 +68,12 @@ program four_tiles
       end do
    end do
 
-   print *, single%lon(1),single%lon(samples),single%lon(samples+1),single%lon(samples*2)
-   print *, single%lat(1),single%lat(samples),single%lat(samples+1),single%lat(samples*2)
-
    !NCファイルの作成
    call nc%set_name("/home/shin/WORK/dat/four_tiles")
    call nc%set_length(single)
    print *, 'progress: set_length'
+   call nc%set_step(single)
+   print *, 'progress: set_step'
    call nc%set_grid(single)
    print *, 'progress: set_grid'
 

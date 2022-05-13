@@ -7,7 +7,7 @@ module read_img
 
    type Tile
       private
-      integer(int32), public, :: west_lon, east_lon, south_lat, north_lat
+      integer(int32), public :: west_lon, east_lon, south_lat, north_lat
       integer(int16), public, allocatable :: data(:,:)
    contains
       procedure :: halve => tile_halve_shrink
@@ -117,10 +117,10 @@ contains
       nlat = self%nlat
       
       !領域端の経緯度を変数に代入する。
-      single%west_lon = self%west_lon
-      single%east_lon = self%east_lon
-      single%south_lat = self%south_lat
-      single%north_lat = self%north_lat
+      single%west_lon = nint(self%west_lon)
+      single%east_lon = nint(self%east_lon)
+      single%south_lat = nint(self%south_lat)
+      single%north_lat = nint(self%north_lat)
 
       !データ配列の定義
       allocate(single%data(nlon, nlat))
@@ -135,7 +135,7 @@ contains
 ! ----------------------------------------------------- !
    subroutine tile_halve_shrink(self)
       class(Tile) :: self
-      real(real64), allocatable ::  work_lon(:), work_lat(:)
+      ! real(real64), allocatable ::  work_lon(:), work_lat(:)
       integer(int32), allocatable :: work(:,:)
       integer(int32) :: i, j, ii, jj, nx, ny, nx_h, ny_h
 
@@ -146,14 +146,12 @@ contains
       ny_h = ny / 2
 
       !work配列を割り付けてに入力配列をコピーする。
-      allocate(work_lon(nx), work_lat(ny), work(nx,ny))
-      work_lon(1:nx) = self%lon(1:nx)
-      work_lat(1:ny) = self%lat(1:ny)
+      allocate(work(nx,ny))
       work(1:nx,1:ny) = self%data(1:nx,1:ny) 
 
       !タイルの割り付けを解放し、新たに半分のサイズで割り付ける。
-      deallocate(self%lon, self%lat, self%data)
-      allocate(self%lon(nx_h), self%lat(ny_h), self%data(nx_h,ny_h))
+      deallocate(self%data)
+      allocate(self%data(nx_h,ny_h))
 
       ! work配列からタイルへコピーする。
       do j = 1, ny, 2
@@ -161,9 +159,6 @@ contains
             ii = ceiling(i/2.)
             jj = ceiling(j/2.)
 
-            !経緯度を間引きして代入する。
-            self%lon(ii) = work_lon(i)
-            self%lat(jj) = work_lat(j)
             !4点のデータを平均してタイルに代入する。
             self%data(ii,jj) = nint( (work(i,j)+work(i+1,j)+work(i,j+1)+work(i+1,j+1)) / 4.0 )
 
@@ -171,7 +166,7 @@ contains
       end do
       
       !work配列の割り付けを解放する。
-      deallocate(work_lon, work_lat, work)
+      deallocate(work)
 
       return
    end subroutine tile_halve_shrink
