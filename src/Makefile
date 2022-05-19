@@ -18,7 +18,7 @@ img2nc.o: img2nc.f90
 	$(FC) -c $(FFLAGS) img2nc.f90
 
 main:	read_lbl.o read_img.o string_operation.o img2nc.o main.f90
-	$(FC) -o a.out $(FFLAGS) read_img.o string_operation.o img2nc.o main.f90
+	$(FC) -o a.out $(FFLAGS) read_lbl.o read_img.o string_operation.o img2nc.o main.f90
 
 test_1: read_lbl.o read_img.o string_operation.o img2nc.o test_1.f90
 	$(FC) -o a.out $(FFLAGS) read_lbl.o read_img.o string_operation.o img2nc.o test_1.f90
