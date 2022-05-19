@@ -8,7 +8,7 @@ module read_img
    type Tile
       private
       integer(int32), public :: west_lon, east_lon, south_lat, north_lat
-      integer(int16), public, allocatable :: data(:,:)
+      integer(int32), public, allocatable :: data(:,:)
    contains
       procedure :: halve => tile_halve_shrink
    end type Tile
