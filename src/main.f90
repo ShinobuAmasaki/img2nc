@@ -9,13 +9,14 @@ program main
    ! type(LunarNC):: nc
 
    ! integer(int32) :: siz_lon, siz_lat
-   character(len=256) :: filename
+   character(len=256) :: filename, outfile
    character(len=256), allocatable :: name_list(:,:)
-   
-!---------------------------------------------------------!
-!リストファイル読み込み
 
    filename='/home/shin/WORK/sldem2013_code_list'
+   outfile='/home/shin/WORK/out.nc'
+
+!---------------------------------------------------------!
+!リストファイル読み込み
 
    call read_tile_list(filename, name_list)
 
@@ -32,7 +33,7 @@ program main
 !---------------------------------------------------------!
 !NCファイルの作成と出力
 
-   call nc_output('/home/shin/WORK/out.nc', single)
+   call nc_output(outfile, single)
 
 !---------------------------------------------------------!
 !割り付け解除
