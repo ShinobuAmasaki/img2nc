@@ -221,11 +221,12 @@ contains
    end subroutine tile_size_check
 
 
-   subroutine load_img_to_tile(name_list, array)
+   subroutine load_img_to_tile(name_list, array, shrink)
       character(len=*), intent(in) :: name_list(:,:)
       type(Tile), intent(inout), allocatable :: array(:,:)
       type(Image), allocatable :: img
       integer(int32) :: siz_lon, siz_lat
+      integer(int32), optional :: shrink
 
       !配列の縦横サイズを取得する。
       siz_lon = size(name_list, 1)
@@ -249,9 +250,17 @@ contains
             !イメージを読み込む
             call img%load_image()
    
-            !タイル配列に書き込む
-            array(i,j) = img%img2tile()
+            if ( present(shrink) ) then
+            
+               !縮小指定してimgをTileに変換してarrayのi-j成分に書き込む
+               array(i,j) = img%img2tile(shrink)
 
+            else
+               !タイル配列に書き込む
+               array(i,j) = img%img2tile()
+            
+            end if
+            
             !イメージを解放
             deallocate(img)
    
@@ -267,6 +276,10 @@ contains
       type(Tile), intent(out) :: result      !集約タイル
       integer(int32) :: nlon, nlat, siz_lon, siz_lat
       integer(int32) :: i, j, start_i, end_i, start_j, end_j, ii, jj
+      integer(int32) :: samples
+
+      !1タイルの1辺の大きさを取得する
+      samples = size(array(1,1)%data, dim=1)
 
       !集約タイルの大きさを取得する。
       nlon = size_of_tile_array(array, 1)

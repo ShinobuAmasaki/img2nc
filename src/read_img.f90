@@ -105,11 +105,12 @@ contains
       size_dem = size(self%dem, dim)
    end function image_size_dem
 
-   function image_convert_to_tile(self) result(single)
+   function image_convert_to_tile(self, shrink) result(single)
       class(image) :: self
       type(Tile) :: single
       integer :: i, j 
       integer(int32) :: nlon, nlat
+      integer(int32), optional :: shrink
       ! real(real64) :: west, east, south, north, step_lon, step_lat
 
       !経緯度の標本数を変数に代入する。
@@ -130,6 +131,28 @@ contains
          end do
       end do 
 
+      !引数shrinkの指定がある場合
+      if ( present(shrink) ) then
+         if (shrink == 1) then
+            return 
+
+         else if (shrink == 2) then
+            call tile_halve_shrink(single)
+         
+         else if (shrink == 4) then
+            call tile_quarter_shrink(single)
+         
+         else if (shrink == 8) then
+            call tile_eighth_shrink(single)
+         
+         else if (shrink == 16) then
+            call tile_sixteenth_shrink(single)
+         
+         ! else if (shrink == 32) then
+            ! call 
+         end if
+      end if
+         
    end function image_convert_to_tile
 
 ! ----------------------------------------------------- !
@@ -278,6 +301,25 @@ contains
       deallocate(work)
 
    end subroutine tile_sixteenth_shrink
+
+! ----------------------------------------------------- !
+   subroutine array_16_shrink(array)
+      type(Tile), intent(inout) :: array(:,:)
+      integer(int32) :: i, j, m, n
+
+      m = size(array, dim=1)
+      n = size(array, dim=2)
+
+      ! print *, m, n
+
+      print *, 'Progress: 1/16 shrink processing.'
+      do i = 1, m
+         do j = 1, n
+            call tile_sixteenth_shrink(array(i,j))
+         end do
+      end do
+   
+   end subroutine array_16_shrink
 
  ! ----------------------------------------------------- !
    function size_of_tile_array(array, dim) result(total)

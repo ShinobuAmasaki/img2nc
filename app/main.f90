@@ -12,7 +12,7 @@ program main
    character(len=256) :: filename, outfile
    character(len=256), allocatable :: name_list(:,:)
 
-   filename='/home/shin/WORK/img2nc/sldem2013_code_list.test'
+   filename='/home/shin/WORK/img2nc/sldem2013_code_list'
    outfile='/home/shin/WORK/out_16.nc'
 
 !---------------------------------------------------------!
@@ -23,7 +23,7 @@ program main
 !---------------------------------------------------------!
 !イメージファイル読み込み
 
-   call load_img_to_tile(name_list, array)
+   call load_img_to_tile(name_list, array, 16)
 
 !---------------------------------------------------------!
 !タイル粗視化処理
@@ -31,7 +31,8 @@ program main
    ! call tile_quarter_shrink(array(1,1))
    ! call tile_eighth_shrink(array(1,1))
    ! call tile_sixteenth_shrink(array(1,1))
-   
+
+   ! call array_16_shrink(array)
 !---------------------------------------------------------!
 !タイルの連結処理
 
