@@ -285,6 +285,15 @@ contains
       result%east_lon  = array(siz_lon,siz_lat)%east_lon
       result%south_lat = array(siz_lon,siz_lat)%south_lat
 
+      if (siz_lon==1 .and. siz_lat==1) then
+         do i = 1, nlon
+            do j = 1, nlat
+               result%data(i,j) = array(1,1)%data(i,nlat-j+1)
+            end do
+         end do
+         return
+      end if
+
       !タイル配列の値を集約タイルにコピーして連結する。
       print *, 'Progress: Start merging.'
       do i = 1, siz_lon

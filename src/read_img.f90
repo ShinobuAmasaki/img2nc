@@ -160,8 +160,8 @@ contains
             jj = ceiling(j/2.)
 
             !4点のデータを平均してタイルに代入する。
-            self%data(ii,jj) = nint( (work(i,j)+work(i+1,j)+work(i,j+1)+work(i+1,j+1)) / 4.0 )
-
+            ! self%data(ii,jj) = nint( (work(i,j)+work(i+1,j)+work(i,j+1)+work(i+1,j+1)) / 4.0 )
+            self%data(ii,jj) = nint( sum(work(i:i+1, j:j+1)) / 4.0 )
          end do
       end do
       
