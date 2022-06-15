@@ -3,7 +3,7 @@ module read_img
    use read_lbl
    implicit none
 
-   integer(int32) :: samples=4096
+   ! integer(int32) :: samples=4096
 
    type Tile
       private
