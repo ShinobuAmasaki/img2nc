@@ -2,7 +2,6 @@ module img2nc
    use iso_fortran_env
    use netcdf
    use read_img
-   use string_operation
 
    type LunarNC
       private

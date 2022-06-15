@@ -158,7 +158,7 @@ pre_execution() {
 
 main() {
 #シェル変数
-data_root="/home/shin/WORK/dat"
+data_root="/mnt/volume/dat"
 repos_root="https://data.darts.isas.jaxa.jp/pub/pds3/sln-l-tc-5-sldem2013-v1.0"
 code_list="./sldem2013_code_list"
 
