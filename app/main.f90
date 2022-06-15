@@ -12,7 +12,7 @@ program main
    character(len=256) :: filename, outfile
    character(len=256), allocatable :: name_list(:,:)
 
-   filename='/home/shin/WORK/sldem2013_code_list'
+   filename='/home/shin/WORK/img2nc/sldem2013_code_list'
    outfile='/home/shin/WORK/out.nc'
 
 !---------------------------------------------------------!
