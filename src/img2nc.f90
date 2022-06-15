@@ -53,6 +53,8 @@ contains
       self%ny = size(single%data, dim=2)
       self%nz = 1
 
+      ! print *, "Grid size: ", self%nx, self%ny
+
    end subroutine lnc_set_length
 
 
@@ -68,6 +70,9 @@ contains
 
       self%step_lon = (dble(east) - dble(west))/dble(self%nx)
       self%step_lat = (dble(north) - dble(south))/dble(self%ny)
+
+      ! print *, "Grid step: ", self%step_lon, self%step_lat
+
    end subroutine lnc_set_step
 
    
@@ -98,7 +103,7 @@ contains
       call check( nf90_create(trim(self%outfile), NF90_HDF5, self%ncid) )
       ! 次元を定義する。
       call check( nf90_def_dim(self%ncid, 'longitude', self%nx, self%lon_dim_id) )
-      call check( nf90_def_dim(self%ncid, 'latitude', self%nx, self%lat_dim_id) )
+      call check( nf90_def_dim(self%ncid, 'latitude', self%ny, self%lat_dim_id) )
       ! 変数を定義する。
       call check( nf90_def_var(self%ncid, 'longitude', NF90_DOUBLE, self%lon_dim_id, self%lon_id) )
       call check( nf90_def_var(self%ncid, 'latitude', NF90_DOUBLE, self%lat_dim_id, self%lat_id) )
@@ -225,8 +230,8 @@ contains
       character(len=*), intent(in) :: name_list(:,:)
       type(Tile), intent(inout), allocatable :: array(:,:)
       type(Image), allocatable :: img
-      integer(int32) :: siz_lon, siz_lat
-      integer(int32), optional :: shrink
+      integer(int32) :: siz_lon, siz_lat, total, current
+      integer(int32), optional, intent(in) :: shrink
 
       !配列の縦横サイズを取得する。
       siz_lon = size(name_list, 1)
@@ -235,7 +240,11 @@ contains
       !読み込み先配列を割り付ける。
       allocate( array(siz_lon, siz_lat) )
 
+      !読み込み総数の取得
+      total = size(name_list, dim=1) * size(name_list, dim=2)
+
       !イメージの読み込み
+      current = 1      
       do i = 1, siz_lon
          do j = 1, siz_lat
 
@@ -265,7 +274,11 @@ contains
             deallocate(img)
    
             !ログ出力
-            print *, 'Loaded: ', trim(name_list(i,j))
+            ! print *, 'Loaded: ', trim(name_list(i,j))
+            write(*, '("Loaded ", i5, "/", i5, ": " a)') current, total, trim(name_list(i,j))
+            
+            !インクリメント
+            current = current + 1
          end do
       end do
    end subroutine load_img_to_tile
