@@ -33,6 +33,11 @@ makecode(){
    local east=`expr "$west" + 1`
    local south=`expr "$north" - 1`
 
+   #東端が360の場合、0に変換する
+   if [ $east -eq 360 ]; then
+      local east="0"
+   fi
+
    #NS符号の記述
    #北端の記述
    if [ $north -ge 0 ]; then
