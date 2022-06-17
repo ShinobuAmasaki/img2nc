@@ -1,5 +1,5 @@
-module read_lbl
-   use iso_fortran_env
+module mod_read_lbl
+   use,intrinsic :: iso_fortran_env
    implicit none
 
    type Label
@@ -157,4 +157,4 @@ contains
       return
    end function label_get_lines
 
-end module read_lbl
+end module mod_read_lbl

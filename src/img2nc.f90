@@ -1,7 +1,7 @@
 module img2nc
-   use iso_fortran_env
+   use, intrinsic :: iso_fortran_env
    use netcdf
-   use read_img
+   use mod_read_img
 
    type LunarNC
       private
@@ -213,13 +213,97 @@ contains
    
    end subroutine read_tile_list
 
+
+   subroutine create_data_name(west, north, name)
+      integer(int32), intent(in) :: west, north
+      integer(int32) :: east, south
+      character(len=*), intent(out) :: name
+      character(len=11) :: prefix
+      character(len=2) :: postfix
+      character(len=4) :: e_west, e_east
+      character(len=3) :: e_north, e_south
+
+      !DTM_MAP_01_N44E323N43E324SC.img
+
+      east = west + 1
+      south = north - 1 
+
+      prefix = 'DTM_MAP_01_'
+      postfix = 'SC'
+
+      ! 西端と東端の記述
+      write(e_west, '(a, i3.3)') 'E', west 
+      write(e_east, '(a, i3.3)') 'E', east
+
+      !北端の記述
+      if ( north >= 0 ) then
+         write(e_north, '(a, i2.2)') 'N', abs(north)
+
+      else if ( north < 0 ) then
+         write(e_north, '(a, i2.2)') 'S', abs(north)
+      
+      end if
+
+      !南端の記述
+      if ( south >= 0 ) then
+         write(e_south, '(a, i2.2)') 'N', abs(south)
+
+      else if ( south < 0 ) then
+         write(e_south, '(a, i2.2)') 'S', abs(south)
+
+      end if
+
+      name = prefix // e_north // e_west // e_south // e_east // postfix
+
+   end subroutine create_data_name
+
+!
+   subroutine create_name_list(data_root, west, east, south, north, name_list)
+      character(len=*), intent(in) :: data_root
+      integer(int32), intent(in) :: west, east, south, north
+      character(len=256), intent(out), allocatable :: name_list(:,:)
+      character(len=27) :: code
+      integer(int32) :: siz_lon, siz_lat, i, j, e_west, e_north
+
+      !配列のサイズを求める。
+      siz_lon = east - west
+      siz_lat = north - south
+
+      ! print *, siz_lon, siz_lat
+
+      !配列サイズのチェック
+      call tile_size_check(siz_lon, siz_lat)
+
+      !配列の割り付け
+      allocate( name_list(siz_lon, siz_lat) )
+
+      do i = 1, siz_lon
+         do j = 1, siz_lat
+            !東端と北端の経緯度を計算する。
+            e_west = east - i
+            e_north = south + j
+
+            call create_data_name(e_west, e_north, code)
+
+            name_list(siz_lon-i+1,siz_lat-j+1) = trim(data_root) // '/' // code
+         end do
+      end do
+
+   end subroutine create_name_list
+
+
    !リストファイルのヘッダーの数値をチェックする。
    subroutine tile_size_check(nx, ny, unit)
-      integer(int32), intent(in) :: nx, ny, unit
+      integer(int32), intent(in) :: nx, ny
+      integer(int32), optional, intent(in) :: unit
 
       if (nx <= 0 .or. ny <= 0) then
          write(0, *) 'ERROR: Invalid tile array size.'
-         close(unit)
+         
+         if (present(unit)) then
+            close(unit)
+         end if
+         
          stop
       end if
    

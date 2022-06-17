@@ -1,6 +1,6 @@
-module read_img
-   use iso_fortran_env
-   use read_lbl
+module mod_read_img
+   use, intrinsic :: iso_fortran_env
+   use mod_read_lbl
    implicit none
 
    ! integer(int32) :: samples=4096
@@ -353,4 +353,4 @@ contains
       swap16 = ior(swap16,ishft(value,-8))
    end function swap16
 
-end module read_img
+end module mod_read_img
