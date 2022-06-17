@@ -39,3 +39,4 @@ test_*.f90
 
 # Execution
 img2nc
+build.sh
