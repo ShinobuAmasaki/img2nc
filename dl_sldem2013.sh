@@ -103,8 +103,8 @@ download_img() {
 }
 
 download_loop() {
-
-   echo "`expr $east - $west`  `expr $north - $south`" > $code_list
+   #リストファイルにヘッダー情報を書き込む
+   # echo "`expr $east - $west`  `expr $north - $south`" > $code_list
 
    #西から東へループする。
    for ((i=$west; i<$east; i++)) {
@@ -123,7 +123,8 @@ download_loop() {
          #imgファイルのダウンロード
          download_img $lon_dir $return
 
-         echo "${data_root}/${return}" >> $code_list
+         # リストファイルに書き込む
+         # echo "${data_root}/${return}" >> $code_list
       }
    }  
 }
@@ -165,7 +166,7 @@ main() {
 #シェル変数
 data_root="/mnt/volume/dat"
 repos_root="https://data.darts.isas.jaxa.jp/pub/pds3/sln-l-tc-5-sldem2013-v1.0"
-code_list="./sldem2013_code_list"
+# code_list="./sldem2013_code_list"
 
 # MAIN
 pre_execution $@
