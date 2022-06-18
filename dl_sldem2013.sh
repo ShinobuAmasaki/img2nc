@@ -1,8 +1,5 @@
 #!/bin/bash
 
-# dl_img 350/352/49/51
-
-# USAGE: parse $1
 parse() {
    #区切り文字列の変更する。
    IFS_SAVE=$IFS
@@ -18,7 +15,6 @@ parse() {
 
    #区切り文字を戻す。
    IFS=$IFS_SAVE
-
 }
 
 # USAGE: makecode <west> <north>
@@ -122,9 +118,6 @@ download_loop() {
 
          #imgファイルのダウンロード
          download_img $lon_dir $return
-
-         # リストファイルに書き込む
-         # echo "${data_root}/${return}" >> $code_list
       }
    }  
 }
@@ -153,27 +146,19 @@ pre_execution() {
       exit 1
    fi 
 
-   #コードリストの初期化
-   if [ -e $code_list ]; then
-      rm $code_list
-   fi
-   touch $code_list
-
    echo 
 }
 
 main() {
-#シェル変数
-data_root="/mnt/volume/dat"
-repos_root="https://data.darts.isas.jaxa.jp/pub/pds3/sln-l-tc-5-sldem2013-v1.0"
-# code_list="./sldem2013_code_list"
+   #シェル変数
+   data_root="./dat"
+   repos_root="https://data.darts.isas.jaxa.jp/pub/pds3/sln-l-tc-5-sldem2013-v1.0"
 
-# MAIN
-pre_execution $@
+   # MAIN
+   pre_execution $@
 
-
-parse $1
-download_loop
+   parse $1
+   download_loop
 }
 
 main $@
