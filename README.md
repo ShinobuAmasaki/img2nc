@@ -5,7 +5,6 @@ Convert planetary DEM[^1] data into NetCDF
 For those who want to draw a topographic map of the Moon.
 
 
-
 ## Abstract
 
 This software has the following roles to:
@@ -21,9 +20,7 @@ This project managed by [**Fortran Package Manager (FPM)**](https://github.com/f
 This software depends on:
 
 - GNU Fortran (gfortran)
-
 - [**Unidata NetCDF Fortran Library**](https://www.unidata.ucar.edu/software/netcdf/).
-
 - wget (to download DEM data)
 
 [^1]: Digital Elevation Model（数値標高地図）
@@ -34,10 +31,8 @@ This software depends on:
 We have checked the operation on the following Linux OS:
 
 - Ubuntu Desktop 22.04 LTS
-
 - openSUSE Linux Tumbleweed
 
-  
 
 ## Installation
 
@@ -74,7 +69,6 @@ $ chmod +x fpm-0.5.0-linux-x86_64
 # Build
 $ fpm build --flag "-I/usr/include" --link-flag "-L/lib/x86_64-linux-gnu"
 ```
-
 
 
 ## Usage
@@ -133,12 +127,10 @@ Executing this shell script, following figure `lambert.png` is outputted. See [G
 [^4]: Generic Mapping Tools: https://www.generic-mapping-tools.org/
 
 
-
 ## Future works
 
 In the future, we would like to implement the following feature:
 
 - Patch for Intel Fortran Compiler (ifort)
-
 - Parallel processing
 
