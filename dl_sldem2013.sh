@@ -1,5 +1,4 @@
 #!/bin/bash
-
 parse() {
    #区切り文字列の変更する。
    IFS_SAVE=$IFS
@@ -17,7 +16,7 @@ parse() {
    IFS=$IFS_SAVE
 }
 
-# USAGE: makecode <west> <north>
+
 makecode(){
    #DTM_MAP_01_N51E350N50E351SC
    prefix="DTM_MAP_01"
@@ -67,10 +66,11 @@ makecode(){
    return="${prefix}_${north}${west}${south}${east}${postfix}"
 }
 
+
 download_lbl() {
    file="$2.lbl"
-   url="${repos_root}/$1/data/${file}"
-   dir="${data_root}"
+   url="${REPOS_ROOT}/$1/data/${file}"
+   dir="${DATA_ROOT}"
 
    if [ -e "$dir/$file" ]; then
       echo "$file: Already exists."
@@ -80,14 +80,15 @@ download_lbl() {
       sleep 1
    fi
 }
+
 
 download_img() {
    #ファイル名の代入
    file="$2.img"
    #URLの生成
-   url="${repos_root}/$1/data/${file}"
+   url="${REPOS_ROOT}/$1/data/${file}"
    #
-   dir="${data_root}"
+   dir="${DATA_ROOT}"
 
    if [ -e "$dir/$file" ]; then
       echo "$file: Already exists."
@@ -97,6 +98,7 @@ download_img() {
       sleep 1
    fi
 }
+
 
 download_loop() {
    #リストファイルにヘッダー情報を書き込む
@@ -122,42 +124,93 @@ download_loop() {
    }  
 }
 
+
 pre_execution() {
-   #引数の存在チェック
-   if [ $# -eq 0 ]; then
-      echo "Argument  <west>/<east>/<south>/<north>  is required." 1>&2
-      exit 1
+   #データディレクトリの設定
+   while getopts d: OPT
+   do
+      case $OPT in
+         #dの引数有オプションについて、存在する場合にFLG_DをTRUEに設定し、引数をVALUE_Dに代入する
+         "d" ) FLG_D="TRUE" ; DATA_ROOT="$OPTARG"
+      esac
+   done
+
+   # dオプションが存在するか
+   if [ ! "$FLG_D" = "TRUE" ]; then
+      usage_exit
    fi
+
+   #DATA_ROOTが有効なディレクトリか
+   if [ ! -d $DATA_ROOT ]; then
+      #存在しない場合
+      mkdir $DATA_ROOT
+   fi
+
+   #引数の存在チェック
+   if [ $# -ne 3 ]; then
+      usage_exit
+   fi
+
+   #引数のシフト
+   shift `expr $OPTIND - 1`
 
    # 引数の範囲チェック
    parse $1
+}
 
-   # echo "$west $east $south $north"
-   
-   if [[ $west -lt 0 || $west -gt $east || $east -gt 360 ]]; then
+
+usage_exit() {
+   echo "Usage: $0 -d DATA_ROOT_DIR <west>/<east>/<south>/<north>" 1>&2
+   exit 1
+}
+
+
+num_evaluation() {
+   #引数が数値かどうか判定する。
+   num=$1
+   if [[ "$num" =~ ^[0-9]+$ ]]; then
+     :
+   else
+      usage_exit
+   fi
+}
+
+
+range_check() {
+   #経度の範囲をチェックする。
+   if [ $west -lt 0 ] || [ $west -ge $east ] || [ $east -gt 360 ]; then
       echo "Invalid longitude value." 1>&2
-      echo "Longitude range is 0 - 360 deg." 1>&2
+      echo "   Longitude range is 0 - 360 deg." 1>&2
+
+      #緯度の範囲をチェックする。
+      if [ $north -gt 90 ] || [ $south -ge $north ] || [ $south -lt -90 ]; then
+         echo "Invalid latitude value." 1>&2
+         echo "   Latitude range is -90 - 90 deg." 1>&2
+         exit 1
+      fi
+
       exit 1
    fi
-
-   if [[ $north -gt 90 || $south -gt $north || $south -lt -90 ]]; then
-      echo "Invalid latitude value." 1>&2
-      echo "Latitude range is -90 - 90 deg." 1>&2
-      exit 1
-   fi 
-
-   echo 
 }
+
 
 main() {
    #シェル変数
-   data_root="./dat"
-   repos_root="https://data.darts.isas.jaxa.jp/pub/pds3/sln-l-tc-5-sldem2013-v1.0"
+   REPOS_ROOT="https://data.darts.isas.jaxa.jp/pub/pds3/sln-l-tc-5-sldem2013-v1.0"
 
    # MAIN
    pre_execution $@
 
-   parse $1
+   # parseされた値が数値か判定する
+   num_evaluation $west
+   num_evaluation $east
+   num_evaluation $south
+   num_evaluation $north
+
+   # 範囲の確認
+   range_check
+
+   # ダウンロードループの実行
    download_loop
 }
 
