@@ -223,9 +223,14 @@ contains
       character(len=4) :: e_west, e_east
       character(len=3) :: e_north, e_south
 
-      !DTM_MAP_01_N44E323N43E324SC.img
+      !e.g. DTM_MAP_01_N44E323N43E324SC.img
+      if (west == 359) then
+         !東端が360度となる場合は、変数eastに整数0を代入する。
+         east = 0
+      else
+         east = west + 1
+      end if
 
-      east = west + 1
       south = north - 1 
 
       prefix = 'DTM_MAP_01_'
