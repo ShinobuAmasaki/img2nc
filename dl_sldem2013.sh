@@ -70,7 +70,7 @@ makecode(){
 download_lbl() {
    file="$2.lbl"
    url="${REPOS_ROOT}/$1/data/${file}"
-   dir="${DATA_ROOT}"
+   dir="${DATA_ROOT}/$1"
 
    if [ -e "$dir/$file" ]; then
       echo "$file: Already exists."
@@ -88,7 +88,7 @@ download_img() {
    #URLの生成
    url="${REPOS_ROOT}/$1/data/${file}"
    #
-   dir="${DATA_ROOT}"
+   dir="${DATA_ROOT}/$1"
 
    if [ -e "$dir/$file" ]; then
       echo "$file: Already exists."
@@ -107,7 +107,17 @@ download_loop() {
    #西から東へループする。
    for ((i=$west; i<$east; i++)) {
       lon_dir="lon$(printf "%03d\n" "$i")"
-      echo $lon_dir
+      
+      #経度ディレクトリのチェック
+      lon_dir_path="${DATA_ROOT}/${lon_dir}"
+      if [ -d $lon_dir_path ]; then
+         :
+      else
+         mkdir $lon_dir_path
+      fi
+
+      #経度ディレクトリへ移動
+      cd $lon_dir_path && echo $lon_dir_path
 
       #北から南へループする。
       for ((j=$north; j>$south; j--)){
@@ -115,12 +125,16 @@ download_loop() {
          #タイルのコードを作成する。
          makecode $i $j
 
+         #$returnにコードが格納されている
          #lblファイルのダウンロード
          download_lbl $lon_dir $return
 
          #imgファイルのダウンロード
          download_img $lon_dir $return
       }
+
+      #データルートディレクトリへ戻る
+      cd $DATA_ROOT
    }  
 }
 
