@@ -168,7 +168,7 @@ usage_exit() {
 num_evaluation() {
    #引数が数値かどうか判定する。
    num=$1
-   if [[ "$num" =~ ^[0-9]+$ ]]; then
+   if [[ "$num" =~ ^[-/+0-9]+$ ]]; then
      :
    else
       usage_exit
