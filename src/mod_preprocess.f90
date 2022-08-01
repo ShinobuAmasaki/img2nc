@@ -222,8 +222,9 @@ contains
    logical function is_valid_dir_path(str) result(res)
       character(len=*) :: str
       integer(int32) :: val
+      integer(int32) :: access ! for ifort
 
-      val = access(trim(str), 'r')  !intelでは記述を変更する必要がある。
+      val = access(trim(str), 'r')
 
       if (val == 0) then
          res = .true.
