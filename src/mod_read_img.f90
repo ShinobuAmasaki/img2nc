@@ -11,6 +11,9 @@ module mod_read_img
       integer(int32), public, allocatable :: data(:,:)
    contains
       procedure :: halve => tile_halve_shrink
+      procedure :: quater => tile_quarter_shrink
+      procedure :: one_eighth => tile_eighth_shrink
+      procedure :: one_sixteenth => tile_sixteenth_shrink
    end type Tile
 
    type Image
