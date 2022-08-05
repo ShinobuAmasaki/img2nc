@@ -269,6 +269,7 @@ contains
       character(len=256), intent(out), allocatable :: name_list(:,:)
       character(len=27) :: code
       integer(int32) :: siz_lon, siz_lat, i, j, e_west, e_north
+      character(len=6) :: lon_dir
 
       !配列のサイズを求める。
       siz_lon = east - west
@@ -287,10 +288,12 @@ contains
             !東端と北端の経緯度を計算する。
             e_west = east - i
             e_north = south + j
-
+            
             call create_data_name(e_west, e_north, code)
 
-            name_list(siz_lon-i+1,siz_lat-j+1) = trim(data_root) // '/' // code
+            write(lon_dir, '(a,i3.3)') 'lon', e_west
+
+            name_list(siz_lon-i+1,siz_lat-j+1) = trim(data_root) // '/' // trim(lon_dir) // '/' // code
          end do
       end do
 
