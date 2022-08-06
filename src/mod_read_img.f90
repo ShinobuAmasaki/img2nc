@@ -8,7 +8,8 @@ module mod_read_img
    type Tile
       private
       integer(int32), public :: west_lon, east_lon, south_lat, north_lat
-      integer(int32), public, allocatable :: data(:,:)
+      ! integer(int32), public, allocatable :: data(:,:)
+      integer(int16), public, allocatable :: data(:,:)
    contains
       procedure :: halve => tile_halve_shrink
       procedure :: quater => tile_quarter_shrink
