@@ -3,6 +3,7 @@ module mod_boundary
    implicit none
    private
    public :: boundary
+   public :: co_broadcast_west, co_broadcast_east, co_broadcast_south, co_broadcast_north
 
    ! type definition
    type :: boundary
@@ -283,6 +284,46 @@ contains
       call self%check(is_east_edge_EAST_OF_west_edge)
 
    end subroutine check_valid_range
+
+!-- co_broadcasting component
+   subroutine co_broadcast_west(self, src_img)
+      type(boundary), intent(inout) :: self
+      integer(int32), intent(in) :: src_img
+   
+      call co_broadcast(self%west_lon, source_image=src_img)
+      sync all
+
+   end subroutine co_broadcast_west
+
+
+   subroutine co_broadcast_east(self, src_img)
+      type(boundary), intent(inout) :: self
+      integer(int32), intent(in) :: src_img
+
+      call co_broadcast(self%east_lon, source_image=src_img)
+      sync all 
+
+   end subroutine co_broadcast_east
+
+
+   subroutine co_broadcast_south(self, src_img)
+      type(boundary), intent(inout) :: self
+      integer(int32), intent(in) :: src_img
+
+      call co_broadcast(self%south_lat, source_image=src_img)
+      sync all
+
+   end subroutine co_broadcast_south
+
+
+   subroutine co_broadcast_north(self, src_img)
+      type(boundary), intent(inout) :: self
+      integer(int32), intent(in) :: src_img
+
+      call co_broadcast(self%north_lat, source_image=src_img)
+      sync all
+
+   end subroutine co_broadcast_north   
 
 
 end module mod_boundary
