@@ -35,9 +35,6 @@
 *.code-workspace
 .vscode
 
-# Test
-test_*.f90
-
-# Execution
-img2nc
-build.sh
+# directories
+test/
+dat/
