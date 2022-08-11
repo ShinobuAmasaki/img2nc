@@ -35,6 +35,9 @@
 *.code-workspace
 .vscode
 
+# NetCDF files
+*.nc
+
 # directories
 test/
 dat/
