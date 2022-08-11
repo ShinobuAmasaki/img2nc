@@ -1,6 +1,15 @@
 module mod_preprocess
-   use iso_fortran_env
+   use, intrinsic ::iso_fortran_env
+   use mod_boundary
    implicit none
+
+   interface preprocess
+      procedure :: preprocess_out_4_sides, preprocess_type_boundary
+   end interface preprocess
+
+   interface valid_range
+      procedure :: valid_range_4_sides, valid_range_type_boundary
+   end interface valid_range
 
    character(len=6) :: h_flag_l = '--help'      ! help
    character(len=8) :: o_flag_l = '--output'    ! output
@@ -13,15 +22,137 @@ module mod_preprocess
 
 contains
 
-   subroutine preprocess(dir, output, range, west, east, south, north)
+   subroutine preprocess_type_boundary(dir, output, range, sides)
+      character(len=*), intent(out) :: dir, output, range
+      type(boundary), intent(out) :: sides
+      
+      integer(int32) :: count, i
+      character(len=256) :: arg
+      logical :: o_read, d_read, r_read, o_exist, d_exist, r_exist, is_valid_range
+
+      !Initialize
+      o_read = .false.
+      d_read = .false.
+      r_read = .false.
+      o_exist = .false.
+      d_exist = .false.
+      r_exist = .false.
+      is_valid_range = .false.
+
+      arg = ''
+      dir = ''
+      output = ''
+      range = ''
+
+      !引数の数を取得する
+      count = command_argument_count()
+
+      if (count == 0) then
+         print *, 'ERROR: too few arguments'
+         call print_usage()
+      end if
+
+      !引数読み込み
+      i = 1
+      do while (i <= count)
+         ! 値引数の読み込み
+         if (o_read) then
+            call get_command_argument(i, output)
+            call confusing_with_option_flag(output)
+            o_read = .false.
+            o_exist = .true.
+            i = i + 1
+            cycle
+
+         else if (d_read) then
+            call get_command_argument(i, dir)
+            call confusing_with_option_flag(dir)
+            d_read = .false.
+            d_exist = .true.
+            i = i + 1
+            cycle
+         
+         else if (r_read) then
+            call get_command_argument(i, range)
+            call confusing_with_option_flag(range)
+            r_read = .false.
+            r_exist = .true.
+            i = i + 1
+            cycle
+         
+         end if
+         !----------------------------------------!
+
+         ! 1つの引数を取得
+         call get_command_argument(i, arg)
+
+         !----------------------------------------!
+         ! ヘルプフラグ
+         if ( is_help_flag(arg) ) then
+            !ヘルプメッセージを表示する。
+            print *, 'given -h'
+            call print_usage()
+            
+         ! 出力ファイル名フラグ
+         else if ( is_out_flag(arg) ) then
+            o_read = .true.
+            i = i + 1
+            cycle
+         
+         ! データルートディレクトリフラグ
+         else if ( is_dir_flag(arg) ) then
+            d_read = .true.
+            i = i + 1
+            cycle
+
+         ! 範囲フラグ
+         else if ( is_range_flag(arg) ) then
+            r_read = .true.
+            i = i + 1
+            cycle
+
+         end if
+      
+         i = i + 1
+      end do
+
+            !---------------------------------------------!
+      ! ここまでにout, dir, rangeに値が格納されていない場合
+      if ( .not. (o_exist .and. d_exist .and. r_exist) ) then
+         print *, 'ERROR: not enough arguments'
+         call print_usage()
+      end if
+
+      !---------------------------------------------!
+      !dir変数が有効なディレクトリでない場合
+      if ( .not. is_valid_dir_path(dir) ) then
+         print *, 'ERROR: given an invalid directry path'
+         stop
+      end if
+
+      !範囲指定の検査
+      ! call valid_range(range, is_valid_range, west, east, south, north)
+      call valid_range(range, sides)
+      if ( .not. sides%get_is_valid() ) then
+         print *, 'ERROR: given an invalid range'
+         call print_usage()
+      end if
+
+      if ( .not. is_valid_out_name(output) ) then
+         print *, 'ERROR: given an unopenable file name'
+         stop
+      end if
+
+   end subroutine preprocess_type_boundary
+
+   
+   subroutine preprocess_out_4_sides(dir, output, range, west, east, south, north)
       character(len=*), intent(out) :: dir, output
       character(len=*), intent(out) :: range
       integer(int32), intent(out) :: west, east, south, north
      
       integer(int32) :: count, i
       character(len=256) :: arg
-
-
       logical :: o_read, d_read, r_read, o_exist, d_exist, r_exist, is_valid_range
 
       ! 初期化
@@ -140,7 +271,7 @@ contains
          stop
       end if
    
-   end subroutine preprocess
+   end subroutine preprocess_out_4_sides
 
    !ヘルプメッセージを出力する。
    subroutine print_usage()
@@ -245,7 +376,50 @@ contains
    end subroutine confusing_with_option_flag
 
 
-   subroutine valid_range(str, is_valid, west, east, south, north)
+   subroutine valid_range_type_boundary(str, sides)
+      character(len=*), intent(in) :: str
+      type(boundary), intent(out) :: sides
+      integer(int32) :: p, q, r, n
+      integer(int32) :: tmp
+
+      ! initialize
+      sides = boundary()
+      tmp = 0
+
+      n = len(trim(str)) !文字数
+
+      ! 1st value
+      p = index(str, '/')
+      read(str(1:p), *, err=150) tmp
+      call sides%set_west_lon(tmp)
+
+      ! 2nd value
+      q = index(str(p+1:n), '/') + p
+      read(str(p+1:q), *, err=150) tmp
+      call sides%set_east_lon(tmp)
+
+      ! 3rd value
+      r = index(str(q+1:n), '/') + q
+      read(str(q+1:r), *, err=150) tmp
+      call sides%set_south_lat(tmp)
+
+      ! 4th value
+      read(str(r+1:n), *, err=150) tmp
+      call sides%set_north_lat(tmp)
+
+      ! validation check
+      call sides%check_valid_range()
+
+      return
+
+      ! Error process
+150   continue
+      call sides%set_is_valid(.false.)
+
+   end subroutine valid_range_type_boundary
+
+
+   subroutine valid_range_4_sides(str, is_valid, west, east, south, north)
    ! logical function is_valid_range(str) result(res)
       character(len=*), intent(in) :: str
       integer :: p, q, r, n
@@ -307,7 +481,7 @@ contains
 
 200   return
 
-   end subroutine valid_range
+   end subroutine valid_range_4_sides
 
 
    logical function is_valid_out_name(str) result(res)
