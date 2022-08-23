@@ -4,27 +4,21 @@ program main
    use img2nc
    implicit none
    
-   ! type(Image), allocatable :: img
    type(Tile), allocatable :: array(:,:)
    type(Tile) :: single
-   ! type(LunarNC):: nc
 
-   ! integer(int32) :: siz_lon, siz_lat
-   ! character(len=256) :: filename, outfile
    character(len=256) :: data_dir, outfile, range
    integer(int32) :: west, east, south, north
    character(len=256), allocatable :: name_list(:,:)
 
-   ! filename='/home/shin/WORK/img2nc/sldem2013_code_list'
-   ! outfile='/home/shin/WORK/out_16.nc'
-
 !---------------------------------------------------------!
 !前処理
+   
    call preprocess(data_dir, outfile, range, west, east, south, north)
 
 !---------------------------------------------------------!
 !リストファイル
-   ! call read_tile_list(filename, name_list)  !リストファイル読み込み
+
    call create_name_list(data_dir, west, east, south, north, name_list)
 
 !---------------------------------------------------------!
