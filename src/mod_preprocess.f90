@@ -19,6 +19,7 @@ module mod_preprocess
    character(len=2) :: o_flag_s = '-o'
    character(len=2) :: d_flag_s = '-d'
    character(len=2) :: r_flag_s = '-r'
+   character(len=12) :: version = 'v1.0.2'
 
 contains
 
@@ -276,7 +277,7 @@ contains
    !ヘルプメッセージを出力する。
    subroutine print_usage()
 
-      print *, 'img2nc v1.0.0, convert data of sldem2013 into netcdf'
+      print *, 'img2nc '// trim(version) //', convert data of sldem2013 into netcdf'
       print *, ''
       print *, 'Usage: img2nc [option]... -r RANGE'
       print *, ''
@@ -391,21 +392,21 @@ contains
       ! 1st value
       p = index(str, '/')
       read(str(1:p), *, err=150) tmp
-      call sides%set_west_lon(tmp)
+      call sides%set_west(tmp)
 
       ! 2nd value
       q = index(str(p+1:n), '/') + p
       read(str(p+1:q), *, err=150) tmp
-      call sides%set_east_lon(tmp)
+      call sides%set_east(tmp)
 
       ! 3rd value
       r = index(str(q+1:n), '/') + q
       read(str(q+1:r), *, err=150) tmp
-      call sides%set_south_lat(tmp)
+      call sides%set_south(tmp)
 
       ! 4th value
       read(str(r+1:n), *, err=150) tmp
-      call sides%set_north_lat(tmp)
+      call sides%set_north(tmp)
 
       ! validation check
       call sides%check_valid_range()
@@ -435,17 +436,14 @@ contains
       p = index(str, '/')
       ! print *, p
       read(str(1:p), *, err=200) west
-
       !2
       q = index(str(p+1:n), '/') + p
       ! print *, q
       read(str(p+1:q), *, err=200) east
-
       !3
       r = index(str(q+1:n), '/') + q
       ! print *, r
       read(str(q+1:r), *, err=200) south
-
       !4
       read(str(r+1:n), *, err=200) north
 
