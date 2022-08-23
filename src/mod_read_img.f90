@@ -8,6 +8,7 @@ module mod_read_img
    type Tile
       private
       integer(int32), public :: west_lon, east_lon, south_lat, north_lat
+      integer(int16), public, dimension(:,:), pointer :: p_data => null()
       integer(int16), public, allocatable :: data(:,:)
    contains
       procedure :: halve => tile_halve_shrink
