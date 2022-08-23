@@ -11,14 +11,14 @@ module mod_boundary
       integer(int32) :: west_lon, east_lon, south_lat, north_lat
       logical :: is_valid
    contains
-      procedure, public, pass :: set_west_lon
-      procedure, public, pass :: get_west_lon
-      procedure, public, pass :: set_east_lon
-      procedure, public, pass :: get_east_lon
-      procedure, public, pass :: set_south_lat
-      procedure, public, pass :: get_south_lat
-      procedure, public, pass :: set_north_lat
-      procedure, public, pass :: get_north_lat
+      procedure, public, pass :: set_west
+      procedure, public, pass :: get_west
+      procedure, public, pass :: set_east
+      procedure, public, pass :: get_east
+      procedure, public, pass :: set_south
+      procedure, public, pass :: get_south
+      procedure, public, pass :: set_north
+      procedure, public, pass :: get_north
       procedure, public, pass :: set_is_valid
       procedure, public, pass :: get_is_valid
       procedure, public, pass :: check_valid_range
@@ -44,10 +44,10 @@ contains
    function init_boundary() result(init)
       type(boundary) :: init
 
-      call init%set_west_lon(0)
-      call init%set_east_lon(0)
-      call init%set_south_lat(0)
-      call init%set_north_lat(0)
+      call init%set_west(0)
+      call init%set_east(0)
+      call init%set_south(0)
+      call init%set_north(0)
 
       call init%set_is_valid(.true.)
       
@@ -55,76 +55,76 @@ contains
 
 
 !-- setter and getter
-   subroutine set_west_lon(self, lon)
+   subroutine set_west(self, lon)
       class(boundary), intent(inout) :: self
       integer(int32), intent(in) :: lon
       
       self%west_lon = lon
 
-   end subroutine set_west_lon
+   end subroutine set_west
 
 
-   function get_west_lon(self) result(lon)
+   function get_west(self) result(lon)
       class(boundary), intent(in) :: self
       integer(int32) :: lon
 
       lon = self%west_lon
    
-   end function get_west_lon
+   end function get_west
 
 
-   subroutine set_east_lon(self, lon)
+   subroutine set_east(self, lon)
       class(boundary), intent(inout) :: self
       integer(int32), intent(in) :: lon
       
       self%east_lon = lon
 
-   end subroutine set_east_lon
+   end subroutine set_east
    
 
-   function get_east_lon(self) result(lon)
+   function get_east(self) result(lon)
       class(boundary), intent(in) :: self
       integer(int32) :: lon
 
       lon = self%east_lon
    
-   end function get_east_lon
+   end function get_east
 
 
-   subroutine set_south_lat(self, lat)
+   subroutine set_south(self, lat)
       class(boundary), intent(inout) :: self
       integer(int32), intent(in) :: lat
 
       self%south_lat = lat
       
-   end subroutine set_south_lat
+   end subroutine set_south
 
 
-   function get_south_lat(self) result(lat)
+   function get_south(self) result(lat)
       class(boundary), intent(in) :: self
       integer(int32) :: lat
 
       lat = self%south_lat
 
-   end function get_south_lat
+   end function get_south
 
 
-   subroutine set_north_lat(self, lat)
+   subroutine set_north(self, lat)
       class(boundary), intent(inout) :: self
       integer(int32), intent(in) :: lat
       
       self%north_lat = lat
 
-   end subroutine set_north_lat
+   end subroutine set_north
 
 
-   function get_north_lat(self) result(lat)
+   function get_north(self) result(lat)
       class(boundary), intent(in) :: self
       integer(int32) :: lat
 
       lat = self%north_lat
 
-   end function get_north_lat 
+   end function get_north 
 
    
    subroutine set_is_valid(self, flag)
