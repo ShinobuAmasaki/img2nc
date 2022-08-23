@@ -35,6 +35,7 @@ module mod_read_lbl
       procedure :: get_north => label_get_north_lat
       procedure :: get_nlon => label_get_line_samples
       procedure :: get_nlat => label_get_lines
+      procedure :: clear => label_clear
       
    end type Label
 
@@ -156,5 +157,37 @@ contains
       lines = self%lines
       return
    end function label_get_lines
+
+   subroutine label_clear(self)
+      class(label) :: self
+      
+      self%filename = ''
+      self%north_lat = 0d0
+      self%south_lat = 0d0
+      self%west_lon = 0d0
+      self%east_lon = 0d0
+      
+      self%bands = 0
+      self%band_storage_type = ''
+      self%band_name = ''
+      
+      self%lines = 0
+      self%line_samples = 0
+      self%sample_type  = ''
+      self%sample_bits  = 0
+      self%image_value_type = ''
+      self%sample_bit_mask  = ''
+      self%offset = 0d0
+      self%scaling_factor = 0d0
+      self%stretched_flag = ''
+      self%valid_minimum = 0
+      self%valid_maximum = 0
+      self%dummy = 0
+      self%average = 0d0
+      self%stdev = 0d0
+      self%mode_pixel = 0
+      self%unit = ''
+
+   end subroutine label_clear
 
 end module mod_read_lbl

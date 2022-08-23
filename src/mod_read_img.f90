@@ -8,7 +8,6 @@ module mod_read_img
    type Tile
       private
       integer(int32), public :: west_lon, east_lon, south_lat, north_lat
-      ! integer(int32), public, allocatable :: data(:,:)
       integer(int16), public, allocatable :: data(:,:)
    contains
       procedure :: halve => tile_halve_shrink
@@ -30,6 +29,7 @@ module mod_read_img
       procedure :: load_image => image_load_img
       procedure :: size_dem => image_size_dem
       procedure :: img2tile => image_convert_to_tile
+      procedure :: clear => image_clear
    end type Image
 
 contains
@@ -158,6 +158,25 @@ contains
       end if
          
    end function image_convert_to_tile
+
+   
+   subroutine image_clear(self)
+      class(Image), intent(inout) :: self
+
+      self%filename = ''
+      self%nlon = 0
+      self%nlat = 0
+      self%west_lon = 0
+      self%east_lon = 0
+      self%south_lat = 0
+      self%north_lat = 0
+      if (allocated(self%dem)) then
+         deallocate(self%dem)
+      end if
+      call self%label%clear()
+
+   end subroutine image_clear
+
 
 ! ----------------------------------------------------- !
    subroutine tile_halve_shrink(self)
