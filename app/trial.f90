@@ -7,28 +7,36 @@ program trial
    use netcdf
    implicit none
 
+   type global_area
+      integer(int32) :: west, east, south, north
+      integer(int32) :: n_div
+      integer(int32) :: nx_img, ny_img ! number of imgs.
+      integer(int32) :: nx, ny ! number of total elements. use these to allocate coarray(:,:)[:]
+   end type global_area
 
-   character(len=256) :: filename, data_dir, range, outfile
-   character(len=256), allocatable :: name_list(:,:)
-
-   type(Tile), allocatable :: array(:,:)
-   type(Tile) :: single_this, out_tile
-   type(Image) :: img
-   type(boundary) :: edge
-
-   integer(int32) :: samples
+   type local_area
+      integer(int32) :: nx, ny
+      integer(int32) :: i_begin, i_end
+   end type local_area
 
    integer(int32) :: i, j, k
    integer(int32) :: n_img, this_img
-   integer(int32) :: nx_this, ny_this, n_div
-   integer(int32) :: nx_each[*], ny_each[*]
-   integer(int32) :: nx_all, ny_all
-   integer(int32) :: siz_lon, siz_lat
 
-   integer(int32), allocatable :: i_begin_this, i_end_this, i_begin_global(:), i_end_global(:)
+   character(len=256) :: filename, data_dir, range, outfile
+   
+   character(len=256), allocatable :: name_list(:,:)
+   type(Tile), allocatable :: array(:,:)
+   type(Tile) :: single, out_tile
+   type(Image) :: img
 
+   ! gathering array
    integer(int16), allocatable, target :: coarray(:,:)[:]
 
+   type(local_area) :: local[*]  !-> 集計に使う
+   type(global_area) :: global
+   type(boundary) :: edge
+
+   ! integer(int32) :: nx_each[*], ny_each[*]
    
    ! arguments
    data_dir = '/mnt/data/DATA/SLDEM2013'
@@ -46,19 +54,19 @@ program trial
 
    call create_name_list(data_dir, edge, name_list)
 
-   siz_lon = size(name_list, 1)
-   siz_lat = size(name_list, 2)
+   global%nx_img = size(name_list, 1)
+   global%ny_img = size(name_list, 2)
 
-   n_div = siz_lon/n_img
+   global%n_div = global%nx_img / n_img
 
-   i_begin_this = n_div*(this_img - 1) + 1
+   local%i_begin = global%n_div * (this_img - 1) + 1
    if (this_img == n_img) then
-      i_end_this = siz_lon
+      local%i_end = global%nx_img
    else
-      i_end_this = i_begin_this + n_div - 1
+      local%i_end = local%i_begin + global%n_div - 1
    end if 
 
-   allocate( array(siz_lon, siz_lat) )
+   allocate( array(global%nx_img, global%ny_img) )
 
 ! ----------------------------------------------------------------- !
    if (this_img == 1) then
@@ -66,8 +74,8 @@ program trial
    end if
    sync all
 
-   do i = i_begin_this, i_end_this
-      do j = 1, siz_lat
+   do i = local%i_begin, local%i_end
+      do j = 1, global%ny_img
 
          call img%label%set_name(name_list(i,j))
          call img%set_name(name_list(i,j))
@@ -76,7 +84,7 @@ program trial
 
          array(i,j) = img%img2tile()
 
-         print '(a)', 'loaded: ', trim(name_list(i,j))
+         print '(a)', 'loaded: '// trim(name_list(i,j))
          call img%clear()
 
       end do
@@ -84,5 +92,89 @@ program trial
    sync all 
 
 !-- TESTED: reading img on multi processes (4CPU) 
+
+   ! single: one tile on each images
+   call merge_tiles(array(local%i_begin:local%i_end, :), single)
+   sync all
+
+   local%nx = size(single%data, dim=1)
+   local%ny = size(single%data, dim=2)
+
+   global%ny = local%ny
+   global%nx = 0
+   do k = 1, n_img
+      global%nx = global%nx + local[k]%nx
+   end do
+   sync all 
+
+   ! define local x index on each image
+   do k = 1, n_img
+      if (k == this_img) then
+
+         if (k == 1) then
+            local%i_begin  = 1
+            local%i_end    = local%nx
+         else
+            local%i_begin  = local[k-1]%i_end + 1
+            local%i_end    = local%i_begin + local%nx - 1
+         end if
+
+      end if
+
+      sync all
+   end do
+   print *, this_img, local%i_begin, local%i_end
+
+
+!-- allocate coarray for aggregation
+   
+   allocate(coarray(global%nx, global%ny)[*], source=int2(0))
+   print *, 'allocate coarray'   
+   sync all
+
+
+   ! gather into image 1.
+   do k = 2, n_img
+      if (this_img /= k) then
+         continue
+      else
+         ! image numberの順にシリアル実行
+         
+         print *, 'gather:', k, 'to', 1
+         do i = local%i_begin, local%i_end
+
+            coarray(i,:)[1] = single%data(i,:)
+
+            ! print progress
+            if ( mod(i,1024) == 0 ) then
+               print *, 'image:', k, 'write column:', i
+            end if
+
+         end do
+         print *, 'image:', k, ' gathered.'
+      end if
+
+
+   end do
+   sync all
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 end program trial

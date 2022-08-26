@@ -9,7 +9,7 @@ copyright = "Copyright 2022, Shinobu Amasaki"
 auto-executables = true
 auto-tests = true
 auto-examples = true
-external-modules = "netcdf"
+external-modules = ["netcdf"]
 link = ["m", "netcdff"] # DON'T change the order for ifort
 
 [install]

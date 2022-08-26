@@ -1,5 +1,6 @@
 module img2nc
    use, intrinsic :: iso_fortran_env
+   use mod_boundary
    use netcdf
    use mod_read_img
 
@@ -23,15 +24,21 @@ module img2nc
 
       procedure :: set_name => lnc_set_name_from_string
       procedure :: set_length => lnc_set_length
-      procedure :: set_step => lnc_set_step
-      procedure :: set_grid => lnc_set_grid
+      procedure :: set_step => lnc_set_step_from_tile
+      procedure :: set_grid => lnc_set_grid_from_tile
       procedure :: define_nc => lnc_define_nc
-      procedure :: load_data => lnc_load_data_nc
+      procedure :: load_data => lnc_load_data_nc_from_tile
+      procedure :: load_data_array => lnc_load_data_nc_from_array
       procedure :: write_var => lnc_write_var_nc
       procedure :: deallocate => lnc_deallocate_nc
       procedure :: close => lnc_close_nc
 
    end type LunarNC
+
+   interface create_name_list
+      module procedure create_name_list_edge, create_name_list_4var
+   end interface
+
 
 contains
       
@@ -44,13 +51,20 @@ contains
       return
    end subroutine lnc_set_name_from_string
    
-
+!-- receive type: Tile
    subroutine lnc_set_length(self, single)
       class(LunarNC) :: self
       type(Tile), intent(in) :: single
 
-      self%nx = size(single%data, dim=1)
-      self%ny = size(single%data, dim=2)
+      !ポインタが割り当てられている場合、分岐する。
+      if (associated(single%p_data)) then
+         self%nx = size(single%p_data, dim=1)
+         self%ny = size(single%p_data, dim=2)
+      else
+         self%nx = size(single%data, dim=1)
+         self%ny = size(single%data, dim=2)
+      end if
+
       self%nz = 1
 
       ! print *, "Grid size: ", self%nx, self%ny
@@ -58,7 +72,7 @@ contains
    end subroutine lnc_set_length
 
 
-   subroutine lnc_set_step(self, single)
+   subroutine lnc_set_step_from_tile(self, single)
       class(LunarNC) :: self
       type(Tile), intent(in) :: single
       integer(int32) :: east, west, north, south
@@ -73,10 +87,10 @@ contains
 
       ! print *, "Grid step: ", self%step_lon, self%step_lat
 
-   end subroutine lnc_set_step
+   end subroutine lnc_set_step_from_tile
 
    
-   subroutine lnc_set_grid(self,single)
+   subroutine lnc_set_grid_from_tile(self,single)
       class(LunarNC) :: self
       type(Tile) :: single
       integer(int32) :: i
@@ -93,7 +107,7 @@ contains
          self%lat(i) = -self%step_lat*(i-1) + dble(single%north_lat)
       end do
 
-   end subroutine lnc_set_grid
+   end subroutine lnc_set_grid_from_tile
 
 
    subroutine lnc_define_nc(self)
@@ -121,19 +135,39 @@ contains
    end subroutine lnc_define_nc
    
 
-   subroutine lnc_load_data_nc(self, single)
+   subroutine lnc_load_data_nc_from_tile(self, single)
       class(LunarNC) :: self
       type(Tile) :: single
 
       allocate(self%data(self%nx, self%ny))
 
-      do i = 1, self%nx
-         do j = 1, self%ny
-            self%data(i,j) = dble(single%data(i,j))
+      if (associated(single%p_data)) then
+         do i = 1, self%nx
+            do j = 1, self%ny
+               self%data(i,j) = dble(single%p_data(i,j))
+            end do
          end do
+      else  
+         do i = 1, self%nx
+            do j = 1, self%ny
+               self%data(i,j) = dble(single%data(i,j))
+            end do
+         end do
+      end if
+   end subroutine lnc_load_data_nc_from_tile
+
+   subroutine lnc_load_data_nc_from_array(self, array)
+      class(LunarNC) :: self
+      integer(int16) :: array(:,:)
+      integer(int32) :: i
+
+      allocate(self%data(self%nx, self%ny))
+
+      do i = 1, self%nx
+         self%data(i,:) = dble(array(i,:))
       end do
 
-   end subroutine lnc_load_data_nc
+   end subroutine lnc_load_data_nc_from_array
 
 
    subroutine lnc_write_var_nc(self)
@@ -185,6 +219,7 @@ contains
 
    
    subroutine read_tile_list(filename, name_list)
+   !-- DEPRECATED --!
       character(len=256), intent(in) :: filename
       character(len=256), intent(out), allocatable :: name_list(:,:)
       integer(int32) :: siz_lon, siz_lat
@@ -263,7 +298,7 @@ contains
    end subroutine create_data_name
 
 !
-   subroutine create_name_list(data_root, west, east, south, north, name_list)
+   subroutine create_name_list_4var(data_root, west, east, south, north, name_list)
       character(len=*), intent(in) :: data_root
       integer(int32), intent(in) :: west, east, south, north
       character(len=256), intent(out), allocatable :: name_list(:,:)
@@ -297,8 +332,17 @@ contains
          end do
       end do
 
-   end subroutine create_name_list
+   end subroutine create_name_list_4var
 
+
+   subroutine create_name_list_edge(data_root, edge, name_list)
+      character(len=*), intent(in) :: data_root
+      type(boundary), intent(in) :: edge
+      character(len=256), intent(out), allocatable :: name_list(:,:)
+
+      call create_name_list_4var(data_root, edge%get_west(), edge%get_east(), edge%get_south(), edge%get_north(), name_list)
+
+   end subroutine create_name_list_edge
 
    !リストファイルのヘッダーの数値をチェックする。
    subroutine tile_size_check(nx, ny, unit)
@@ -375,6 +419,54 @@ contains
       end do
    end subroutine load_img_to_tile
 
+   ! set lon/lat edge value into a single tile
+   function north_lat_from_tile_array(array, i_begin) result(north)
+      implicit none
+      type(Tile), intent(in) :: array(:,:)
+      integer(int32), intent(in) :: i_begin
+      integer(int32) :: north
+      
+      north = array(i_begin,1)%north_lat
+
+   end function north_lat_from_tile_array
+
+
+   function west_lon_from_tile_array(array, i_begin) result(west)
+      implicit none
+      type(Tile), intent(in) :: array(:,:)
+      integer(int32), intent(in) :: i_begin
+      integer(int32) :: west
+
+
+      west = array(i_begin,1)%west_lon
+
+   end function west_lon_from_tile_array
+
+
+   function south_lat_from_tile_array(array, i_begin) result(south)
+      implicit none
+      type(Tile), intent(in) :: array(:,:)
+      integer(int32), intent(in) :: i_begin
+      integer(int32) :: south_end, south
+
+      south_end = size(array, dim=2)
+
+      south = array(i_begin, south_end)%south_lat
+
+   end function south_lat_from_tile_array
+
+
+   function east_lon_from_tile_array(array, i_end) result(east)
+      implicit none
+      type(Tile), intent(in) :: array(:,:)
+      integer(int32), intent(in) :: i_end
+      integer(int32) :: east_end, east
+
+      east_end = i_end
+      east = array(east_end, 1)%east_lon
+
+   end function east_lon_from_tile_array
+ 
 
    subroutine merge_tiles(array, result)
       type(Tile), intent(in) :: array(:,:)   !タイル配列
@@ -398,6 +490,7 @@ contains
       allocate(result%data(nlon, nlat))
 
       !東西南北端の緯度経度をコピーする。
+      !tileの北西端・南東端 -> resultの端
       result%west_lon  = array(1,1)%west_lon
       result%north_lat = array(1,1)%north_lat
       result%east_lon  = array(siz_lon,siz_lat)%east_lon
