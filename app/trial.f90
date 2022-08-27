@@ -46,14 +46,45 @@ program trial
    global%ny_img = size(name_list, 2)
 
    global%n_div = global%nx_img / n_img
+   global%n_mod = mod(global%nx_img, n_img)
 
-   local%i_begin = global%n_div * (this_img - 1) + 1
-   if (this_img == n_img) then
-      local%i_end = global%nx_img
+   local%ny_img = global%ny_img
+   
+   ! local%nx_img definition
+   do k = 1, n_img
+      if (k == this_img) then
+         
+         local%nx_img = global%n_div
+
+         if (k <= global%n_mod) then
+            local%nx_img = local%nx_img + 1
+         end if
+
+      end if
+   end do
+
+   if (global%n_mod /= 0) then 
+      ! 割り切れない場合
+      if (this_img <= global%n_mod) then
+         !余りを分配する前方のイメージについて
+         local%i_begin = (global%n_div + 1) * (this_img - 1) + 1
+            ! (商 + 余り分配1)*(this_img - 1) + 1
+         local%i_end = local%i_begin + global%n_div
+
+      else
+         !余りを分配しない後方のイメージについて
+         local%i_begin = (global%n_div + 1)*global%n_mod + global%n_div*(this_img - global%n_mod - 1) + 1
+            ! (商 + 余り分配1)*(余りを分配したイメージの数) + 商*(余り分配してないイメージ1つ目からの順序番号 - 1) + 1
+         local%i_end = local%i_begin + global%n_div - 1
+      end if 
+   
    else
-      local%i_end = local%i_begin + global%n_div - 1
-   end if 
+      !割り切れる場合
+      local%i_begin = global%n_div * (this_img - 1) + 1
+      local%i_end = local%i_begin + global%n_div - 1   
+   end if
 
+   
    allocate( array(global%nx_img, global%ny_img) )
 
 ! ----------------------------------------------------------------- !
@@ -63,7 +94,7 @@ program trial
    sync all
 
    do i = local%i_begin, local%i_end
-      do j = 1, global%ny_img
+      do j = 1, local%ny_img
 
          call img%label%set_name(name_list(i,j))
          call img%set_name(name_list(i,j))
@@ -100,11 +131,11 @@ program trial
       if (k == this_img) then
 
          if (k == 1) then
-            local%i_begin  = 1
-            local%i_end    = local%nx
+            local%i_e_begin  = 1
+            local%i_e_end    = local%nx
          else
-            local%i_begin  = local[k-1]%i_end + 1
-            local%i_end    = local%i_begin + local%nx - 1
+            local%i_e_begin  = local[k-1]%i_e_end + 1
+            local%i_e_end    = local%i_e_begin + local%nx - 1
          end if
 
       end if
@@ -112,7 +143,7 @@ program trial
       sync all
    end do
    sync all
-   print *, this_img, local%i_begin, local%i_end
+   print *, this_img, local%i_e_begin, local%i_e_end
 
 !----------------------------!
 !-- Single-process Forking --!
@@ -141,13 +172,17 @@ program trial
 
 
    ! gather into 1st image.
-   do k = 2, n_img
+   do k = 1, n_img
       if (this_img /= k) then
          continue
+      else if (this_img == 1) then
+         
+         coarray(local%i_e_begin:local%i_e_end, 1:local%ny) = single%data(local%i_e_begin:local%i_e_end, 1:local%ny)
+
       else
          ! serial gather processes order by image number
          print *, 'gather:', k, 'to', 1
-         do i = local%i_begin, local%i_end
+         do i = local%i_e_begin, local%i_e_end
 
             coarray(i,:)[1] = single%data(i,:)
 
@@ -159,7 +194,6 @@ program trial
          end do
          print *, 'image:', k, ' gathered.'
       end if
-      sync all
 
    end do
    sync all
