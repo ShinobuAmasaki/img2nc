@@ -73,9 +73,9 @@ download_lbl() {
    dir="${DATA_ROOT}/$1"
 
    if [ -e "$dir/$file" ]; then
-      echo "  $file: Already exists."
+      echo "$file: Already exists."
    else
-      echo -n "  $file: "
+      echo -n "$file: "
       wget --quiet -P $dir $url && echo "Downloaded."
       sleep 1
    fi
@@ -91,9 +91,9 @@ download_img() {
    dir="${DATA_ROOT}/$1"
 
    if [ -e "$dir/$file" ]; then
-      echo "  $file: Already exists."
+      echo "$file: Already exists."
    else
-      echo -n "  $file: "
+      echo -n "$file: "
       wget --quiet -P $dir $url && echo "Downloaded."
       sleep 1
    fi
@@ -117,7 +117,7 @@ download_loop() {
       fi
 
       #経度ディレクトリへ移動
-      cd $lon_dir_path && echo "$lon_dir: $lon_dir_path"
+      cd $lon_dir_path && echo $lon_dir_path
 
       #北から南へループする。
       for ((j=$north; j>$south; j--)){
@@ -152,13 +152,6 @@ pre_execution() {
    # dオプションが存在するか
    if [ ! "$FLG_D" = "TRUE" ]; then
       usage_exit
-   fi
-
-   #DATA_ROOTが/ではじまる絶対パスか
-   HEAD=`echo $DATA_ROOT | cut -c 1`
-   if [ $HEAD != "/" ]; then
-      PWDIR=`pwd`
-      DATA_ROOT="$PWDIR/$DATA_ROOT"
    fi
 
    #DATA_ROOTが有効なディレクトリか
