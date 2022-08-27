@@ -172,7 +172,7 @@ program trial
 !-- Output NC file --!
    if (this_img == 1) then
 
-      call set_lonlat_to_tile_from_edge(final_tile, edge)
+      call final_tile%read_boundary(edge)
       
       final_tile%p_data => coarray
 
