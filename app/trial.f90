@@ -125,9 +125,22 @@ program trial
    end do
    print *, this_img, local%i_begin, local%i_end
 
+!----------------------------!
+!-- Single-process Forking --!
+   if (n_img == 1) then
 
-!-- allocate coarray for aggregation
-   
+      call set_lonlat_to_tile_from_edge(single, edge)
+      call nc_output(outfile, single)
+
+      print *, 'single-process: nc outputted.'
+      stop
+      
+   end if
+
+!----------------------!
+!-- Multi-processing --!
+
+   ! allocate coarray for aggregation
    allocate(coarray(global%nx, global%ny)[*], source=int2(0))
    print *, 'allocate coarray'   
    sync all
@@ -153,25 +166,10 @@ program trial
          end do
          print *, 'image:', k, ' gathered.'
       end if
-
+      sync all
 
    end do
    sync all
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
