@@ -39,7 +39,7 @@ program trial
    ! integer(int32) :: nx_each[*], ny_each[*]
    
    ! arguments
-   data_dir = '/mnt/data/DATA/SLDEM2013'
+   data_dir = '/home/shin0/WORK/img2nc/dat'
    outfile = '/home/shin0/WORK/img2nc/out.nc'
    range = '0/4/-1/3'
 
@@ -123,6 +123,7 @@ program trial
 
       sync all
    end do
+   sync all
    print *, this_img, local%i_begin, local%i_end
 
 !----------------------------!
