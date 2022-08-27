@@ -1,49 +1,37 @@
 program trial
    use, intrinsic :: iso_fortran_env
+   use mod_boundary
+   use mod_array_division
    use mod_preprocess
    use mod_read_img
-   use mod_boundary
    use img2nc
    use netcdf
    implicit none
 
-   type global_area
-      integer(int32) :: west, east, south, north
-      integer(int32) :: n_div
-      integer(int32) :: nx_img, ny_img ! number of imgs.
-      integer(int32) :: nx, ny ! number of total elements. use these to allocate coarray(:,:)[:]
-   end type global_area
-
-   type local_area
-      integer(int32) :: nx, ny
-      integer(int32) :: i_begin, i_end
-   end type local_area
-
    integer(int32) :: i, j, k
    integer(int32) :: n_img, this_img
 
-   character(len=256) :: filename, data_dir, range, outfile
-   
+   character(len=256) :: filename, data_dir, range, outnc
    character(len=256), allocatable :: name_list(:,:)
    type(Tile), allocatable :: array(:,:)
-   type(Tile) :: single, out_tile
+   type(Tile) :: single    ! image local
+   type(Tile) :: final_tile  ! on 1st image for output nc
    type(Image) :: img
 
    ! gathering array
    integer(int16), allocatable, target :: coarray(:,:)[:]
 
-   type(local_area) :: local[*]  !-> 集計に使う
    type(global_area) :: global
+   type(local_area) :: local[*]
    type(boundary) :: edge
 
-   ! integer(int32) :: nx_each[*], ny_each[*]
-   
+
    ! arguments
    data_dir = '/home/shin0/WORK/img2nc/dat'
-   outfile = '/home/shin0/WORK/img2nc/out.nc'
+   outnc = '/home/shin0/WORK/img2nc/out.nc'
    range = '0/4/-1/3'
 
-   ! call preprocess(data_dir, outfile, range, edge)
+   ! call preprocess(data_dir, outnc, range, edge)
    n_img = num_images()
    this_img = this_image()
 
@@ -91,7 +79,7 @@ program trial
    end do 
    sync all 
 
-!-- TESTED: reading img on multi processes (4CPU) 
+! ----------------------------------------------------------------- !
 
    ! single: one tile on each images
    call merge_tiles(array(local%i_begin:local%i_end, :), single)
@@ -130,10 +118,15 @@ program trial
 !-- Single-process Forking --!
    if (n_img == 1) then
 
-      call set_lonlat_to_tile_from_edge(single, edge)
-      call nc_output(outfile, single)
+      call single%read_boundary(edge)
+      call nc_output(outnc, single)
 
       print *, 'single-process: nc outputted.'
+
+      if (allocated(single%data)) then
+         deallocate(single%data)
+      end if
+
       stop
       
    end if
@@ -147,13 +140,12 @@ program trial
    sync all
 
 
-   ! gather into image 1.
+   ! gather into 1st image.
    do k = 2, n_img
       if (this_img /= k) then
          continue
       else
-         ! image numberの順にシリアル実行
-         
+         ! serial gather processes order by image number
          print *, 'gather:', k, 'to', 1
          do i = local%i_begin, local%i_end
 
@@ -172,8 +164,41 @@ program trial
    end do
    sync all
 
+   if (allocated(single%data)) then
+      deallocate(single%data)
+   end if
 
+!--------------------!
+!-- Output NC file --!
+   if (this_img == 1) then
 
+      call set_lonlat_to_tile_from_edge(final_tile, edge)
+      
+      final_tile%p_data => coarray
 
+      call nc_output(outnc, final_tile)
+
+      !finalize
+      print *, 'multi-process: nc outputted.'
+
+   end if
+
+!------------------!
+!-- deallocation --!
+   if (allocated(array)) then
+      deallocate(array)
+   end if
+
+   if (allocated(coarray)) then
+      deallocate(coarray)
+   end if
+
+   if (allocated(single%data)) then
+      deallocate(single%data)
+   end if
+
+   if (allocated(name_list)) then
+      deallocate(name_list)
+   end if
 
 end program trial

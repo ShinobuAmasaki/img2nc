@@ -1,5 +1,6 @@
 module mod_read_img
    use, intrinsic :: iso_fortran_env
+   use mod_boundary
    use mod_read_lbl
    implicit none
 
@@ -15,6 +16,7 @@ module mod_read_img
       procedure :: quater => tile_quarter_shrink
       procedure :: one_eighth => tile_eighth_shrink
       procedure :: one_sixteenth => tile_sixteenth_shrink
+      procedure :: read_boundary => set_lonlat_to_tile_from_boundary
    end type Tile
 
    type Image
@@ -325,6 +327,18 @@ contains
       deallocate(work)
 
    end subroutine tile_sixteenth_shrink
+
+! ----------------------------------------------------- !
+
+   subroutine set_lonlat_to_tile_from_boundary(self, bound)
+      class(Tile), intent(inout) :: self
+      type(boundary), intent(in) :: bound
+
+      self%west_lon  = bound%get_west()
+      self%east_lon  = bound%get_east()
+      self%south_lat = bound%get_south()
+      self%north_lat = bound%get_north()
+   end subroutine set_lonlat_to_tile_from_boundary
 
 ! ----------------------------------------------------- !
    subroutine array_16_shrink(array)
