@@ -174,14 +174,14 @@ contains
       class(LunarNC) :: self
 
       call check( nf90_put_var(self%ncid, self%lon_id, self%lon(1:self%nx) ) )
-      print *, 'Progress: put_var lon'
+      print *, 'nc: put_var lon'
       call check( nf90_put_var(self%ncid, self%lat_id, self%lat(1:self%ny) ) )
-      print *, 'Progress: put_var lat'
+      print *, 'nc: put_var lat'
 
       self%start_nc = [1, 1]
       self%count_nc = [self%nx, self%ny]
       call check( nf90_put_var(self%ncid, self%elev_id, self%data, start=self%start_nc, count=self%count_nc) )
-      print *, 'Progress: put_var elev'
+      print *, 'nc: put_var elev'
       return
    end subroutine lnc_write_var_nc
 
