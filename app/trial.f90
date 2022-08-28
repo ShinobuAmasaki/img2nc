@@ -29,67 +29,28 @@ program trial
    ! arguments
    data_dir = '/home/shin0/WORK/img2nc/dat'
    outnc = '/home/shin0/WORK/img2nc/out.nc'
-   range = '0/4/-1/3'
+   range = '90/94/-4/0'
 
    ! call preprocess(data_dir, outnc, range, edge)
    n_img = num_images()
    this_img = this_image()
 
-   call edge%set_west(0)
-   call edge%set_east(4)
-   call edge%set_south(-1)
-   call edge%set_north(3)
+   call edge%set_west(90)
+   call edge%set_east(94)
+   call edge%set_south(-4)
+   call edge%set_north(0)
 
    call create_name_list(data_dir, edge, name_list)
 
-   global%nx_img = size(name_list, 1)
-   global%ny_img = size(name_list, 2)
+   call global%preload_global_area_setting(name_list)
+   call local%preload_local_area_setting(global)
+   call local%divide_array_index(global)
 
-   global%n_div = global%nx_img / n_img
-   global%n_mod = mod(global%nx_img, n_img)
-
-   local%ny_img = global%ny_img
-   
-   ! local%nx_img definition
-   do k = 1, n_img
-      if (k == this_img) then
-         
-         local%nx_img = global%n_div
-
-         if (k <= global%n_mod) then
-            local%nx_img = local%nx_img + 1
-         end if
-
-      end if
-   end do
-
-   if (global%n_mod /= 0) then 
-      ! 割り切れない場合
-      if (this_img <= global%n_mod) then
-         !余りを分配する前方のイメージについて
-         local%i_begin = (global%n_div + 1) * (this_img - 1) + 1
-            ! (商 + 余り分配1)*(this_img - 1) + 1
-         local%i_end = local%i_begin + global%n_div
-
-      else
-         !余りを分配しない後方のイメージについて
-         local%i_begin = (global%n_div + 1)*global%n_mod + global%n_div*(this_img - global%n_mod - 1) + 1
-            ! (商 + 余り分配1)*(余りを分配したイメージの数) + 商*(余り分配してないイメージ1つ目からの順序番号 - 1) + 1
-         local%i_end = local%i_begin + global%n_div - 1
-      end if 
-   
-   else
-      !割り切れる場合
-      local%i_begin = global%n_div * (this_img - 1) + 1
-      local%i_end = local%i_begin + global%n_div - 1   
-   end if
-
-   
    allocate( array(global%nx_img, global%ny_img) )
 
 ! ----------------------------------------------------------------- !
    if (this_img == 1) then
-      print *, 'start loading .img'
+      print *, 'start: loading .img'
    end if
    sync all
 
@@ -139,11 +100,10 @@ program trial
          end if
 
       end if
-
-      sync all
    end do
-   sync all
-   print *, this_img, local%i_e_begin, local%i_e_end
+   sync all 
+
+   ! print *, this_img, local%i_e_begin, local%i_e_end
 
 !----------------------------!
 !-- Single-process Forking --!
@@ -167,32 +127,24 @@ program trial
 
    ! allocate coarray for aggregation
    allocate(coarray(global%nx, global%ny)[*], source=int2(0))
-   print *, 'allocate coarray'   
+   ! print *, 'allocate coarray'   
    sync all
 
 
    ! gather into 1st image.
    do k = 1, n_img
       if (this_img /= k) then
+         
          continue
       else if (this_img == 1) then
          
          coarray(local%i_e_begin:local%i_e_end, 1:local%ny) = single%data(local%i_e_begin:local%i_e_end, 1:local%ny)
-
       else
+
          ! serial gather processes order by image number
-         print *, 'gather:', k, 'to', 1
-         do i = local%i_e_begin, local%i_e_end
-
-            coarray(i,:)[1] = single%data(i,:)
-
-            ! print progress
-            if ( mod(i,1024) == 0 ) then
-               print *, 'image:', k, 'write column:', i
-            end if
-
-         end do
-         print *, 'image:', k, ' gathered.'
+         print *, 'gather:', k, 'into', 1
+         coarray(local%i_e_begin:local%i_e_end, 1:global%ny)[1] = single%data(local%i_e_begin:local%i_e_end, 1:global%ny) 
+         print *, 'gather:', k, ' image gathered'
       end if
 
    end do
