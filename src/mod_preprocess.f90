@@ -19,7 +19,7 @@ module mod_preprocess
    character(len=2) :: o_flag_s = '-o'
    character(len=2) :: d_flag_s = '-d'
    character(len=2) :: r_flag_s = '-r'
-   character(len=12) :: version = 'v1.0.2'
+   character(len=12) :: version = 'v2.0.0_rc1'
 
 contains
 

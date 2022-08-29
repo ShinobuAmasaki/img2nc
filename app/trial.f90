@@ -54,8 +54,8 @@ program trial
    end if
    sync all
 
-   do i = local%i_begin, local%i_end
-      do j = 1, local%ny_img
+   do j = 1, local%ny_img
+      do i = local%i_begin, local%i_end
 
          call img%label%set_name(name_list(i,j))
          call img%set_name(name_list(i,j))
@@ -142,7 +142,7 @@ program trial
       else
 
          ! serial gather processes order by image number
-         print *, 'gather:', k, 'into', 1
+         print *, 'gather: image', k, 'into', 1
          coarray(local%i_e_begin:local%i_e_end, 1:global%ny)[1] = single%data(local%i_e_begin:local%i_e_end, 1:global%ny) 
          print *, 'gather:', k, ' image gathered'
       end if

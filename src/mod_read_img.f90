@@ -351,8 +351,8 @@ contains
       ! print *, m, n
 
       print *, 'Progress: 1/16 shrink processing.'
-      do i = 1, m
-         do j = 1, n
+      do j = 1, n
+         do i = 1, m    
             call tile_sixteenth_shrink(array(i,j))
          end do
       end do
