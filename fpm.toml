@@ -1,5 +1,5 @@
 name = "img2nc"
-version = "1.1.0"
+version = "2.0.0"
 license = "MIT"
 author = "Shinobu Amasaki"
 maintainer = "amasaki203@gmail.com"
@@ -9,7 +9,7 @@ copyright = "Copyright 2022, Shinobu Amasaki"
 auto-executables = true
 auto-tests = true
 auto-examples = true
-external-modules = ["netcdf"]
+external-modules = ["netcdf", "mpi_f08"]
 link = ["m", "netcdff"] # DON'T change the order for ifort
 
 [install]
