@@ -7,6 +7,7 @@ module mod_array_division
       integer(int32) :: n_div, n_mod
       integer(int32) :: nx_img, ny_img ! number of imgs.
       integer(int32) :: nx, ny ! number of total elements. use these to allocate coarray(:,:)[:]
+      integer(int32), allocatable :: local_nx(:), local_ny(:)
    contains
       procedure :: preload_global_area_setting
    end type global_area
