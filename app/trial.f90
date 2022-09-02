@@ -42,9 +42,9 @@ program trial
 
    call create_name_list(data_dir, edge, name_list)
 
-   call global%preload_global_area_setting(name_list)
-   call local%preload_local_area_setting(global)
-   call local%divide_array_index(global)
+   call global%preload_global_area_setting(name_list, num_images())
+   call local%preload_local_area_setting(global, this_image())
+   call local%divide_array_index(global, this_image())
 
    allocate( array(global%nx_img, global%ny_img) )
 

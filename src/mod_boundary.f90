@@ -11,6 +11,7 @@ module mod_boundary
       integer(int32) :: west_lon, east_lon, south_lat, north_lat
       logical :: is_valid
    contains
+      procedure, public, pass :: set_four
       procedure, public, pass :: set_west
       procedure, public, pass :: get_west
       procedure, public, pass :: set_east
@@ -55,6 +56,17 @@ contains
 
 
 !-- setter and getter
+
+   subroutine set_four(self, west, east, south, north)
+      class(boundary), intent(inout) :: self
+      integer(int32), intent(in) :: west, east, south, north
+      
+      call self%set_west(west)
+      call self%set_east(east)
+      call self%set_south(south)
+      call self%set_north(north)
+   end subroutine set_four
+
    subroutine set_west(self, lon)
       class(boundary), intent(inout) :: self
       integer(int32), intent(in) :: lon
