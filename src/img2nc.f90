@@ -142,17 +142,19 @@ contains
       allocate(self%data(self%nx, self%ny))
 
       if (associated(single%p_data)) then
-         do i = 1, self%nx
-            do j = 1, self%ny
-               self%data(i,j) = dble(single%p_data(i,j))
-            end do
-         end do
+         ! do i = 1, self%nx
+         !    do j = 1, self%ny
+         !       self%data(i,j) = dble(single%p_data(i,j))
+         !    end do
+         ! end do
+         self%data(1:self%nx, 1:self%ny) = dble(single%p_data(1:self%nx, 1:self%ny))
       else  
-         do i = 1, self%nx
-            do j = 1, self%ny
-               self%data(i,j) = dble(single%data(i,j))
-            end do
-         end do
+      !    do i = 1, self%nx
+      !       do j = 1, self%ny
+      !          self%data(i,j) = dble(single%data(i,j))
+      !       end do
+      !    end do
+         self%data(1:self%nx, 1:self%ny) = dble(single%data(1:self%nx, 1:self%ny))
       end if
    end subroutine lnc_load_data_nc_from_tile
 
@@ -538,30 +540,39 @@ contains
 
       !ncの出力名をoutnameに設定する。
       call nc%set_name(outname)
+      print *, 'nc: set name.'
 
       !ncの縦横長さをタイルから設定する。
       call nc%set_length(single)
+      print *, 'nc: set length.'
 
       !ncの格子間隔をタイルから取得して設定する。
       call nc%set_step(single)
+      print *, 'nc: set step.'
 
       !ncの経度緯度グリッドを作成する。
       call nc%set_grid(single)
+      print *, 'nc: set grid.'
 
       !ncを定義する。
       call nc%define_nc()
+      print *, 'nc: define nc.'
 
       !ncにタイルからデータをコピーする。
       call nc%load_data(single)
+      print *, 'nc: load data.'
 
       !ncの出力ファイルに変数を書き込む。
       call nc%write_var()
+      print *, 'nc: write var'
 
       !ncの書き込み用変数の割り付けを解除する。
       call nc%deallocate()
+      print *, 'nc: deallocate.'
 
       !ncの出力ファイルを閉じる。
       call nc%close()
+      print *, 'nc: close.'
 
    end subroutine nc_output
 
