@@ -47,7 +47,7 @@ program trial_mpi
    call local%preload_local_area_setting(global, this)
    call local%divide_array_index(global, this)
 
-   allocate( array(global%nx_img, global%ny_img))
+   allocate( array(global%nlon_img, global%nlat_img))
    call mpi_barrier(mpi_comm_world, ierr)   
 
 !----
@@ -57,17 +57,17 @@ program trial_mpi
    end if
 
    
-   do j = local%j_begin, local%j_end
-      do i = 1, local%ny_img
-
+   do j = 1, local%nlat_img
+      do i = local%i_begin, local%i_end
+       !-*- DO NOT exchange i,j order for valid processing of function total_size_of_tile_array -*-
+      
          call img%label%set_name(name_list(i,j))
          call img%set_name(name_list(i,j))
          call img%read_lbl()
 
          call img%load_image()
-         load_img = img%img2tile(16)
 
-         array(i,j) = load_img
+         array(i,j) = img%img2tile(16)
 
          print '(a)', 'loaded: ' // trim(name_list(i,j))
          call img%clear()
@@ -78,36 +78,38 @@ program trial_mpi
 
 !----
    ! merge tiles on each rank
-   call merge_tiles(array(local%j_begin:local%j_end, :), single)
+   ! print *, this, ':', local%i_begin, local%i_end : PASS
+
+   call merge_tiles(array(local%i_begin:local%i_end, :), single)
    call mpi_barrier(mpi_comm_world, ierr)
 
 !----
-   local%ny = size(single%data, dim=1)
-   local%nx = size(single%data, dim=2)
+   local%nlon = size(single%data, dim=1)
+   local%nlat = size(single%data, dim=2)
 
-   allocate(global%local_nx(petot), source=0)
-   allocate(global%local_ny(petot), source=0)
+   allocate(global%local_nlon(petot), source=0)
+   allocate(global%local_nlat(petot), source=0)
 
-   ! globalに各localのnx,nyをallgatherする。
-   global%local_ny(1) = local%ny
-   global%local_nx(1) = local%nx
-   call mpi_allgather(global%local_nx(1), 1, mpi_integer4, global%local_nx(1), 1, mpi_integer4, mpi_comm_world, ierr)
-   call mpi_allgather(global%local_ny(1), 1, mpi_integer4, global%local_ny(1), 1, mpi_integer4, mpi_comm_world, ierr)
+   ! globalに各localのnlon,nlatをallgatherする。
+   global%local_nlon(1) = local%nlon
+   global%local_nlat(1) = local%nlat
+   call mpi_allgather(global%local_nlon(1), 1, mpi_integer4, global%local_nlon(1), 1, mpi_integer4, mpi_comm_world, ierr)
+   call mpi_allgather(global%local_nlat(1), 1, mpi_integer4, global%local_nlat(1), 1, mpi_integer4, mpi_comm_world, ierr)
    
-   global%nx = sum(global%local_nx(:), dim=1)
-   global%ny = sum(global%local_ny(:), dim=1)
+   global%nlon = sum(global%local_nlon(:), dim=1)
+   global%nlat = sum(global%local_nlat(:), dim=1)
 
 
    ! define local lon-direction index on each rank
    if (this == 1) then
-      local%j_e_begin = 1
-      local%j_e_end = local%nx
+      local%i_e_begin = 1
+      local%i_e_end = local%nlon
    else
-      local%j_e_begin = sum(global%local_nx(1:this-1), dim=1) + 1
-      local%j_e_end = local%j_e_begin + local%nx - 1
+      local%i_e_begin = sum(global%local_nlon(1:this-1), dim=1) + 1
+      local%i_e_end = local%i_e_begin + local%nlon - 1
    end if
    call mpi_barrier(mpi_comm_world, ierr)
-   ! print *, this, ':', local%j_e_begin, local%j_e_end
+   ! print *, this, ':', local%i_e_begin, local%i_e_end
 
 !---------------------!
 !  Single processing  !
@@ -127,13 +129,13 @@ program trial_mpi
    
 
    if (this == 1) then
-      allocate(data_array(global%nx, global%ny), source=int2(0))
+      allocate(data_array(global%nlon, global%nlat), source=int2(0))
       print *, 'final_tile%data allocated.'
-      print *, 'global:', global%nx*global%ny, global%nx, global%ny
+      print *, 'global:', global%nlon*global%nlat, global%nlon, global%nlat
    end if
 
-   n_send = local%nx*local%ny
-   print *, this, ':', n_send, local%nx, local%ny
+   n_send = local%nlon*local%nlat
+   print *, this, ':', n_send, local%nlon, local%nlat
    call mpi_barrier(mpi_comm_world, ierr)
 
    !-- MPI Comm derived type definition
@@ -182,12 +184,12 @@ contains
          deallocate(single%data)
       end if
 
-      if (allocated(global%local_nx)) then
-         deallocate(global%local_nx)
+      if (allocated(global%local_nlon)) then
+         deallocate(global%local_nlon)
       end if
 
-      if (allocated(global%local_ny)) then
-         deallocate(global%local_ny)
+      if (allocated(global%local_nlat)) then
+         deallocate(global%local_nlat)
       end if
 
       if (allocated(name_list)) then
@@ -199,6 +201,14 @@ contains
       end if
    end subroutine all_deallocate
       
+   subroutine on_test_finalize()
+
+      call all_deallocate()
+      call mpi_finalize(ierr)
+      stop
+   end subroutine on_test_finalize
+
+
 
 end program trial_mpi
    

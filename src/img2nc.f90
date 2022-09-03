@@ -476,12 +476,13 @@ contains
       integer(int32) :: samples, lines
 
       !1タイルの1辺の大きさを取得する
-      samples = size(array(1,1)%data, dim=2)
-      lines = size(array(1,1)%data, dim=1)
+      samples = size(array(1,1)%data, dim=1)
+      lines = size(array(1,1)%data, dim=2)
 
       !集約タイルの大きさを取得する。
-      nlon = size_of_tile_array(array, 1)
-      nlat = size_of_tile_array(array, 2)
+      nlon = total_size_of_tile_array(array, 1)
+      nlat = total_size_of_tile_array(array, 2)
+
 
       !タイル配列のサイズを取得する。
       siz_lon = size(array, 1)
@@ -494,12 +495,12 @@ contains
       !tileの北西端・南東端 -> resultの端
       result%west_lon  = array(1,1)%west_lon
       result%north_lat = array(1,1)%north_lat
-      result%east_lon  = array(siz_lat, siz_lon)%east_lon
-      result%south_lat = array(siz_lat, siz_lon)%south_lat
+      result%east_lon  = array(siz_lon, siz_lat)%east_lon
+      result%south_lat = array(siz_lon, siz_lat)%south_lat
 
       if (siz_lon==1 .and. siz_lat==1) then
-         do j = 1, nlon
-            do i = 1, nlat
+         do j = 1, nlat
+            do i = 1, nlon
                result%data(i,j) = array(1,1)%data(i,j)
 
                ! result%data(i,j) = array(1,1)%data(i,nlat-j+1)
@@ -530,15 +531,15 @@ contains
       !    end do
       ! end do
 
-      do j = 1, siz_lon
+      do j = 1, siz_lat
          start_j = 1 + (j-1)*samples
          end_j = j*samples
 
-         do i = 1, siz_lat
+         do i = 1, siz_lon
             start_i = 1 + (i-1)*lines
             end_i = i*lines
 
-            result%data(start_i:end_i, start_j:end_j) = array(i,j)%data(1:lines, 1:samples)
+            result%data(start_i:end_i, start_j:end_j) = array(i,j)%data(1:samples, 1:lines)
          end do
       end do 
       print *, 'merge: End merging.'

@@ -378,7 +378,7 @@ contains
    end subroutine array_16_shrink
 
  ! ----------------------------------------------------- !
-   function size_of_tile_array(array, dim) result(total)
+   function total_size_of_tile_array(array, dim) result(total)
       type(Tile), intent(in) :: array(:,:)
       integer(int32), intent(in) :: dim
       integer(int32) :: k, n, total
@@ -390,12 +390,14 @@ contains
       
          if (dim == 1) then
             total = total + size(array(k,1)%data, dim)
+
          else if (dim == 2) then
             total = total + size(array(1,k)%data, dim)
+
          end if
       
       end do
-   end function size_of_tile_array
+   end function total_size_of_tile_array
 
 ! ----------------------------------------------------- !
 
