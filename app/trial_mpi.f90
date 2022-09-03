@@ -97,7 +97,7 @@ program trial_mpi
    call mpi_allgather(global%local_nlat(1), 1, mpi_integer4, global%local_nlat(1), 1, mpi_integer4, mpi_comm_world, ierr)
    
    global%nlon = sum(global%local_nlon(:), dim=1)
-   global%nlat = sum(global%local_nlat(:), dim=1)
+   global%nlat = local%nlat   !緯度方向優先で経度を分割しているため
 
 
    ! define local lon-direction index on each rank
@@ -133,6 +133,7 @@ program trial_mpi
       print *, 'final_tile%data allocated.'
       print *, 'global:', global%nlon*global%nlat, global%nlon, global%nlat
    end if
+   call mpi_barrier(mpi_comm_world, ierr)
 
    n_send = local%nlon*local%nlat
    print *, this, ':', n_send, local%nlon, local%nlat
