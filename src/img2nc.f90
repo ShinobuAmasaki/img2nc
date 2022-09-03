@@ -1,5 +1,6 @@
 module img2nc
    use, intrinsic :: iso_fortran_env
+   use mpi_f08
    use mod_boundary
    use netcdf
    use mod_read_img
@@ -67,7 +68,7 @@ contains
 
       self%nz = 1
 
-      ! print *, "Grid size: ", self%nx, self%ny
+      print *, "Grid size: ", self%nx, self%ny
 
    end subroutine lnc_set_length
 
@@ -170,9 +171,9 @@ contains
    subroutine lnc_write_var_nc(self)
       class(LunarNC) :: self
 
-      call check( nf90_put_var(self%ncid, self%lon_id, self%lon(1:self%ny) ) )
+      call check( nf90_put_var(self%ncid, self%lon_id, self%lon(1:self%nx) ) )
       print *, 'nc: put_var lon'
-      call check( nf90_put_var(self%ncid, self%lat_id, self%lat(1:self%nx) ) )
+      call check( nf90_put_var(self%ncid, self%lat_id, self%lat(1:self%ny) ) )
       print *, 'nc: put_var lat'
 
       self%start_nc = [1, 1]
@@ -210,6 +211,7 @@ contains
 
          ! ステータスコードから対応するエラーメッセージを取得し、コンソールに表示する。
          print *, trim(nf90_strerror(status))
+         call mpi_finalize(ierr)
          stop "Stopped"
       end if
    end subroutine check
