@@ -57,6 +57,7 @@ contains
       integer :: unit
       integer :: i, j, jj
       integer(int16) :: val
+      integer(int16), allocatable :: samples(:)
       character(len=100) :: errmsg
 
       ! 経度方向のデータ数を構造体変数nlonに代入する。
@@ -71,30 +72,47 @@ contains
       self%north_lat = self%label%get_north()
 
       ! 構造体の配列変数demを経度・緯度のデータ数の範囲で割り付ける。
-      allocate(self%dem(self%nlon, self%nlat))
+      allocate(self%dem(self%nlat, self%nlon), source=int2(0))
       ! 配列を初期化する。
-      self%dem(:,:) = 0
+      ! self%dem(:,:) = 0
+
+      ! 一時メモリを確保
+      allocate(samples(self%nlon), source=int2(0))
 
       ! 既存のIMGファイルをバイナリストリームで開く。
       open(newunit=unit, file=self%filename, form='unformatted', access='stream', status='old')
 
-      ! データの読み込む。
+      ! lines方向(下から上)に読み込み
       do j = 1, self%nlat
+         ! 緯度方向には南から書き込むために、ループ変数から対応するインデックスを計算して代入する。
+         ! jj = self%nlat + 1 - j
+         ! do i = self%nlon, 1, -1
+         !    ! 入力ストリームから2バイト読み込んで、変数valに代入する。。
+         !    read(unit, end=100, err=110, iomsg=errmsg) val           
+         !    ! 読み込んだ値をバイトスワップして、配列に書き込む。
+         !    self%dem(i,j) = swap16(val)
+         ! end do
+
+         ! 1行(samples; 画像の右から左)読み込み
          do i = 1, self%nlon
-
-            ! 緯度方向には南から書き込むために、ループ変数から対応するインデックスを計算して代入する。
-            jj = self%nlat + 1 - j
-
-            ! 入力ストリームから2バイト読み込んで、変数valに代入する。。
-            read(unit, end=100, err=110, iomsg=errmsg) val
-            
-            ! 読み込んだ値をバイトスワップして、配列に書き込む。
-            self%dem(i,jj) = swap16(val)
-
+            read(unit, err=110, iomsg=errmsg) val
+            samples(i) = swap16(val)
          end do
+
+         ! データ書き込み
+         self%dem(:,j) = samples(:)
+
+         ! clear
+         samples(:) = int2(0)
+
       end do
 
 100   continue
+      ! Regular
+      if(allocated(samples)) then
+         deallocate(samples)
+      end if
+
       close(unit)
       return
 
@@ -131,12 +149,12 @@ contains
       single%north_lat = nint(self%north_lat)
 
       !データ配列の定義
-      allocate(single%data(nlon, nlat))
-      do j = 1, nlat
-         do i = 1, nlon
-            single%data(i,j) = self%dem(i,j)
-         end do
-      end do 
+      allocate(single%data(nlat, nlon))
+      ! do j = 1, nlat
+      !    do i = 1, nlon
+      single%data(1:nlat,1:nlon) = self%dem(1:nlat,1:nlon)
+      !    end do
+      ! end do 
 
       !引数shrinkの指定がある場合
       if ( present(shrink) ) then

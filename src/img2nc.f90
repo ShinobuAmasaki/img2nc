@@ -142,31 +142,26 @@ contains
       allocate(self%data(self%nx, self%ny))
 
       if (associated(single%p_data)) then
-         ! do i = 1, self%nx
-         !    do j = 1, self%ny
-         !       self%data(i,j) = dble(single%p_data(i,j))
-         !    end do
-         ! end do
          self%data(1:self%nx, 1:self%ny) = dble(single%p_data(1:self%nx, 1:self%ny))
+
       else  
-      !    do i = 1, self%nx
-      !       do j = 1, self%ny
-      !          self%data(i,j) = dble(single%data(i,j))
-      !       end do
-      !    end do
          self%data(1:self%nx, 1:self%ny) = dble(single%data(1:self%nx, 1:self%ny))
+      
       end if
    end subroutine lnc_load_data_nc_from_tile
 
    subroutine lnc_load_data_nc_from_array(self, array)
       class(LunarNC) :: self
       integer(int16) :: array(:,:)
-      integer(int32) :: i
+      integer(int32) :: j
 
+      ! allocate(self%data(self%nx, self%ny))
+      ! do i = 1, self%nx
+      !    self%data(i,:) = dble(array(i,:))
+      ! end do
       allocate(self%data(self%nx, self%ny))
-
-      do i = 1, self%nx
-         self%data(i,:) = dble(array(i,:))
+      do j = 1, self%ny
+         self%data(:,j) = dble(array(:,j))
       end do
 
    end subroutine lnc_load_data_nc_from_array
@@ -175,9 +170,9 @@ contains
    subroutine lnc_write_var_nc(self)
       class(LunarNC) :: self
 
-      call check( nf90_put_var(self%ncid, self%lon_id, self%lon(1:self%nx) ) )
+      call check( nf90_put_var(self%ncid, self%lon_id, self%lon(1:self%ny) ) )
       print *, 'nc: put_var lon'
-      call check( nf90_put_var(self%ncid, self%lat_id, self%lat(1:self%ny) ) )
+      call check( nf90_put_var(self%ncid, self%lat_id, self%lat(1:self%nx) ) )
       print *, 'nc: put_var lat'
 
       self%start_nc = [1, 1]
@@ -220,35 +215,35 @@ contains
    end subroutine check
 
    
-   subroutine read_tile_list(filename, name_list)
-   !-- DEPRECATED --!
-      character(len=256), intent(in) :: filename
-      character(len=256), intent(out), allocatable :: name_list(:,:)
-      integer(int32) :: siz_lon, siz_lat
-      integer(int32) :: unit
+   ! subroutine read_tile_list(filename, name_list)
+   ! !-- DEPRECATED --!
+   !    character(len=256), intent(in) :: filename
+   !    character(len=256), intent(out), allocatable :: name_list(:,:)
+   !    integer(int32) :: siz_lon, siz_lat
+   !    integer(int32) :: unit
 
-      !リストファイルを開く。
-      open(file=filename, status='old', newunit=unit)
-      !ヘッダーの読み取り
-      read(unit, *) siz_lon, siz_lat
+   !    !リストファイルを開く。
+   !    open(file=filename, status='old', newunit=unit)
+   !    !ヘッダーの読み取り
+   !    read(unit, *) siz_lon, siz_lat
 
-      !エラー処理
-      call tile_size_check(siz_lon, siz_lat, unit)
+   !    !エラー処理
+   !    call tile_size_check(siz_lon, siz_lat, unit)
 
-      !ファイル名の読み込み先を割り付ける。
-      allocate( name_list(siz_lon, siz_lat) )
+   !    !ファイル名の読み込み先を割り付ける。
+   !    allocate( name_list(siz_lon, siz_lat) )
 
-      !リストの読み込み(列優先)
-      do i = 1, siz_lon
-         do j = 1, siz_lat
-            read(unit, '(a)') name_list(i,j)
-         end do
-      end do
+   !    !リストの読み込み(列優先)
+   !    do i = 1, siz_lon
+   !       do j = 1, siz_lat
+   !          read(unit, '(a)') name_list(i,j)
+   !       end do
+   !    end do
       
-      !ファイルを閉じる。
-      close(unit)
+   !    !ファイルを閉じる。
+   !    close(unit)
    
-   end subroutine read_tile_list
+   ! end subroutine read_tile_list
 
 
    subroutine create_data_name(west, north, name)
@@ -320,17 +315,20 @@ contains
       !配列の割り付け
       allocate( name_list(siz_lon, siz_lat) )
 
-      do i = 1, siz_lon
-         do j = 1, siz_lat
+      do j = 1, siz_lat
+         e_north = south + j
+
+         do i = 1, siz_lon
             !東端と北端の経緯度を計算する。
             e_west = east - i
-            e_north = south + j
-            
+
             call create_data_name(e_west, e_north, code)
 
             write(lon_dir, '(a,i3.3)') 'lon', e_west
 
+            !南東の角から順番に書き込む
             name_list(siz_lon-i+1,siz_lat-j+1) = trim(data_root) // '/' // trim(lon_dir) // '/' // code
+            ! インデックスの指定を変更しない：マージ時のタイル配置に影響する
          end do
       end do
 
@@ -475,10 +473,11 @@ contains
       type(Tile), intent(out) :: result      !集約タイル
       integer(int32) :: nlon, nlat, siz_lon, siz_lat
       integer(int32) :: i, j, start_i, end_i, start_j, end_j, ii, jj
-      integer(int32) :: samples
+      integer(int32) :: samples, lines
 
       !1タイルの1辺の大きさを取得する
-      samples = size(array(1,1)%data, dim=1)
+      samples = size(array(1,1)%data, dim=2)
+      lines = size(array(1,1)%data, dim=1)
 
       !集約タイルの大きさを取得する。
       nlon = size_of_tile_array(array, 1)
@@ -495,40 +494,54 @@ contains
       !tileの北西端・南東端 -> resultの端
       result%west_lon  = array(1,1)%west_lon
       result%north_lat = array(1,1)%north_lat
-      result%east_lon  = array(siz_lon,siz_lat)%east_lon
-      result%south_lat = array(siz_lon,siz_lat)%south_lat
+      result%east_lon  = array(siz_lat, siz_lon)%east_lon
+      result%south_lat = array(siz_lat, siz_lon)%south_lat
 
       if (siz_lon==1 .and. siz_lat==1) then
-         do i = 1, nlon
-            do j = 1, nlat
-               result%data(i,j) = array(1,1)%data(i,nlat-j+1)
+         do j = 1, nlon
+            do i = 1, nlat
+               result%data(i,j) = array(1,1)%data(i,j)
+
+               ! result%data(i,j) = array(1,1)%data(i,nlat-j+1)
             end do
          end do
          return
       end if
 
       !タイル配列の値を集約タイルにコピーして連結する。
-      print *, 'Progress: Start merging.'
-      do i = 1, siz_lon
-         !ローカルの始点・終点の列を定義する。
-         start_i = 1 + (i-1)*samples
-         end_i = i*samples
+      print *, 'merge: Start merging.'
+      ! do i = 1, siz_lon
+      !    !ローカルの始点・終点の列を定義する。
+      !    start_i = 1 + (i-1)*samples
+      !    end_i = i*samples
          
-         do j = 1, siz_lat
-            !ローカルの始点・終点の行を定義する。
-            start_j = 1 + (j-1)*samples
-            end_j = j*samples
+      !    do j = 1, siz_lat
+      !       !ローカルの始点・終点の行を定義する。
+      !       start_j = 1 + (j-1)*samples
+      !       end_j = j*samples
 
-            !ローカルのループをして、データを集約タイルにコピーする。
-            do ii = 1, samples
-               do jj = 1, samples
-                  result%data(start_i+ii-1,end_j-jj+1) = array(i,j)%data(ii,jj)
-               end do
-            end do
+      !       !ローカルのループをして、データを集約タイルにコピーする。
+      !       do ii = 1, samples
+      !          do jj = 1, samples
+      !             result%data(start_i+ii-1,end_j-jj+1) = array(i,j)%data(ii,jj)
+      !          end do
+      !       end do
 
+      !    end do
+      ! end do
+
+      do j = 1, siz_lon
+         start_j = 1 + (j-1)*samples
+         end_j = j*samples
+
+         do i = 1, siz_lat
+            start_i = 1 + (i-1)*lines
+            end_i = i*lines
+
+            result%data(start_i:end_i, start_j:end_j) = array(i,j)%data(1:lines, 1:samples)
          end do
-      end do
-      print *, 'Progress: End merging.'
+      end do 
+      print *, 'merge: End merging.'
 
    end subroutine merge_tiles
 

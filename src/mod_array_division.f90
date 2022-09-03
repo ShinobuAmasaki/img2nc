@@ -15,8 +15,8 @@ module mod_array_division
    type :: local_area
       integer(int32) :: nx, ny
       integer(int32) :: nx_img, ny_img
-      integer(int32) :: i_begin, i_end
-      integer(int32) :: i_e_begin, i_e_end
+      integer(int32) :: j_begin, j_end
+      integer(int32) :: j_e_begin, j_e_end
    contains
       procedure :: preload_local_area_setting
       procedure :: divide_array_index
@@ -28,7 +28,7 @@ contains
       class(local_area), intent(inout) :: self
       type(global_area), intent(in) :: global
       integer(int32), intent(in) :: this_number
-      integer(int32) :: n_mod, n_div, i_begin, i_end
+      integer(int32) :: n_mod, n_div, j_begin, j_end
 
       n_mod = global%n_mod
       n_div = global%n_div
@@ -37,23 +37,23 @@ contains
          !割り切れない場合
          if (this_number <= n_mod) then
             !余りを分配する前方のイメージについて
-            i_begin = (n_div + 1)*(this_number - 1) + 1
-            i_end   = i_begin + n_div 
+            j_begin = (n_div + 1)*(this_number - 1) + 1
+            j_end   = j_begin + n_div 
          
          else
             !余りを分配しない後方のイメージについて
-            i_begin = (n_div + 1)*n_mod + n_div*(this_number - n_mod - 1) + 1
-            i_end   = i_begin + n_div - 1
+            j_begin = (n_div + 1)*n_mod + n_div*(this_number - n_mod - 1) + 1
+            j_end   = j_begin + n_div - 1
          end if
 
       else
          !割り切れる場合 
-         i_begin = n_div*(this_number - 1) + 1
-         i_end   = i_begin + n_div - 1
+         j_begin = n_div*(this_number - 1) + 1
+         j_end   = j_begin + n_div - 1
       end if 
 
-      self%i_begin = i_begin
-      self%i_end   = i_end 
+      self%j_begin = j_begin
+      self%j_end   = j_end 
 
    end subroutine divide_array_index
 

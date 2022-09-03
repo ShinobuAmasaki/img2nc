@@ -56,17 +56,16 @@ program trial_mpi
       print *, 'start: loading img files'
    end if
 
-   do j = 1, local%ny_img
-      do i = local%i_begin, local%i_end
+   
+   do j = local%j_begin, local%j_end
+      do i = 1, local%ny_img
 
          call img%label%set_name(name_list(i,j))
          call img%set_name(name_list(i,j))
          call img%read_lbl()
 
-
          call img%load_image()
-         load_img = img%img2tile()
-         call load_img%one_sixteenth()
+         load_img = img%img2tile(16)
 
          array(i,j) = load_img
 
@@ -79,19 +78,19 @@ program trial_mpi
 
 !----
    ! merge tiles on each rank
-   call merge_tiles(array(local%i_begin:local%i_end, :), single)
+   call merge_tiles(array(local%j_begin:local%j_end, :), single)
    call mpi_barrier(mpi_comm_world, ierr)
 
 !----
-   local%nx = size(single%data, dim=1)
-   local%ny = size(single%data, dim=2)
+   local%ny = size(single%data, dim=1)
+   local%nx = size(single%data, dim=2)
 
    allocate(global%local_nx(petot), source=0)
    allocate(global%local_ny(petot), source=0)
 
    ! globalに各localのnx,nyをallgatherする。
-   global%local_nx(1) = local%nx
    global%local_ny(1) = local%ny
+   global%local_nx(1) = local%nx
    call mpi_allgather(global%local_nx(1), 1, mpi_integer4, global%local_nx(1), 1, mpi_integer4, mpi_comm_world, ierr)
    call mpi_allgather(global%local_ny(1), 1, mpi_integer4, global%local_ny(1), 1, mpi_integer4, mpi_comm_world, ierr)
    
@@ -99,16 +98,16 @@ program trial_mpi
    global%ny = sum(global%local_ny(:), dim=1)
 
 
-   ! define local x index on each rank
+   ! define local lon-direction index on each rank
    if (this == 1) then
-      local%i_e_begin = 1
-      local%i_e_end = local%nx
+      local%j_e_begin = 1
+      local%j_e_end = local%nx
    else
-      local%i_e_begin = sum(global%local_nx(1:this-1), dim=1) + 1
-      local%i_e_end = local%i_e_begin + local%nx - 1
+      local%j_e_begin = sum(global%local_nx(1:this-1), dim=1) + 1
+      local%j_e_end = local%j_e_begin + local%nx - 1
    end if
    call mpi_barrier(mpi_comm_world, ierr)
-   ! print *, this, ':', local%i_e_begin, local%i_e_end
+   ! print *, this, ':', local%j_e_begin, local%j_e_end
 
 !---------------------!
 !  Single processing  !
