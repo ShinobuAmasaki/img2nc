@@ -12,6 +12,7 @@ module mod_array_division
       integer(int32) :: nlat ! for lat
       integer(int32), allocatable :: local_nlon(:), local_nlat(:)
    contains
+      procedure :: init => global_init
       procedure :: preload_global_area_setting
       procedure :: gather_local_nlon_nlat
       procedure :: set_nlon_nlat => global_set_nlon_nlat
@@ -21,16 +22,31 @@ module mod_array_division
       integer(int32) :: nlon, nlat
       integer(int32) :: nlon_img, nlat_img
       integer(int32) :: lon_begin, lon_end
-      integer(int32) :: lon_e_begin, lon_e_end
+      ! integer(int32) :: lon_e_begin, lon_e_end
       integer(int32) :: lat_begin, lat_end
-      integer(int32) :: lat_e_begin, lat_e_end
+      ! integer(int32) :: lat_e_begin, lat_e_end
    contains
+      procedure :: init => local_init
       procedure :: preload_local_area_setting
       procedure :: divide_array_index
       procedure :: set_nlon_nlat => local_set_nlon_nlat
    end type local_area
 
 contains
+
+!-- class procedure of type local_area
+   subroutine local_init(self)
+      class(local_area), intent(out) :: self
+
+      self%nlon = 0
+      self%nlat = 0
+      self%nlon_img  = 0
+      self%nlat_img  = 0
+      self%lon_begin = 0
+      self%lon_end   = 0
+      self%lat_begin = 0
+      self%lat_end   = 0
+   end subroutine local_init
 
    subroutine divide_array_index(self,global, this_number, priority)
       class(local_area), intent(inout) :: self
@@ -109,6 +125,32 @@ contains
       self%nlat = size(single%data, dim=2)
 
    end subroutine local_set_nlon_nlat
+
+!-- class procedure of type global_area
+
+   subroutine global_init(self)
+      class(global_area), intent(out) :: self
+
+      self%west = 0
+      self%east = 0
+      self%south = 0
+      self%north = 0
+      self%n_div = 0
+      self%n_mod = 0
+      self%nlon_img = 0
+      self%nlat_img = 0
+      self%nlon = 0
+      self%nlat = 0
+      
+      if (allocated(self%local_nlon)) then
+         deallocate(self%local_nlon)
+      end if
+
+      if (allocated(self%local_nlat)) then
+         deallocate(self%local_nlat)
+      end if
+
+   end subroutine global_init
 
 
    subroutine preload_global_area_setting(self, name_list, petot)
