@@ -28,6 +28,8 @@ program trial_mpi
    type(boundary) :: edge
 
    type(mpi_datatype) :: t_integrate
+
+   character(len=3) :: priority
    
 !--------------------------------------------------------!
    call mpi_init(ierr)
@@ -36,16 +38,17 @@ program trial_mpi
    this = this_rank + 1 ! for MPI
 
 !--------------------------------------------------------!
-   data_dir = '/home/shin0/WORK/img2nc/dat'
+   data_dir = '/home/shin0/WORK/img2nc/dat' 
    outnc = '/home/shin0/WORK/img2nc/out_04-13.nc'
    range = '0/4/-1/3'
+   priority = 'lon'
    call edge%set_four(0, 4, -1, 3)
 
    call create_name_list(data_dir, edge, name_list)
    
    call global%preload_global_area_setting(name_list, petot)
    call local%preload_local_area_setting(global, this)
-   call local%divide_array_index(global, this)
+   call local%divide_array_index(global, this, priority=priority)
 
    allocate( array(global%nlon_img, global%nlat_img))
    call mpi_barrier(mpi_comm_world, ierr)   
@@ -57,10 +60,13 @@ program trial_mpi
    end if
 
    
-   do j = 1, local%nlat_img
-      do i = local%i_begin, local%i_end
+   ! do j = 1, local%nlat_img
+   !    do i = local%i_begin, local%i_end
        !-*- DO NOT exchange i,j order for valid processing of function total_size_of_tile_array -*-
-      
+
+   do j = local%lat_begin, local%lat_end
+      do i = local%lon_begin, local%lon_end
+
          call img%label%set_name(name_list(i,j))
          call img%set_name(name_list(i,j))
          call img%read_lbl()
@@ -69,7 +75,7 @@ program trial_mpi
 
          array(i,j) = img%img2tile(16)
 
-         print '(a)', 'loaded: ' // trim(name_list(i,j))
+         print '(i2, a)', this, 'loaded: ' // trim(name_list(i,j))
          call img%clear()
 
       end do 
@@ -80,34 +86,32 @@ program trial_mpi
    ! merge tiles on each rank
    ! print *, this, ':', local%i_begin, local%i_end : PASS
 
-   call merge_tiles(array(local%i_begin:local%i_end, :), single)
+   call merge_tiles(array(local%lon_begin:local%lon_end, local%lat_begin:local%lat_end), single)
    call mpi_barrier(mpi_comm_world, ierr)
 
+   ! print *, single%west_lon, single%east_lon, single%south_lat, single%north_lat
+   ! print *, size(single%data, dim=1), size(single%data, dim=2)
+   ! call on_test_finalize()
+
 !----
-   local%nlon = size(single%data, dim=1)
-   local%nlat = size(single%data, dim=2)
+   call local%set_nlon_nlat(single)
+      ! local%nlon = size(single%data, dim=1)
+      ! local%nlat = size(single%data, dim=2)
 
    allocate(global%local_nlon(petot), source=0)
    allocate(global%local_nlat(petot), source=0)
 
    ! globalに各localのnlon,nlatをallgatherする。
-   global%local_nlon(1) = local%nlon
-   global%local_nlat(1) = local%nlat
-   call mpi_allgather(global%local_nlon(1), 1, mpi_integer4, global%local_nlon(1), 1, mpi_integer4, mpi_comm_world, ierr)
-   call mpi_allgather(global%local_nlat(1), 1, mpi_integer4, global%local_nlat(1), 1, mpi_integer4, mpi_comm_world, ierr)
-   
-   global%nlon = sum(global%local_nlon(:), dim=1)
-   global%nlat = local%nlat   !緯度方向優先で経度を分割しているため
+   call global%gather_local_nlon_nlat(local, mpi_comm_world, ierr)
+      ! global%local_nlon(1) = local%nlon
+      ! global%local_nlat(1) = local%nlat
+      ! call mpi_allgather(global%local_nlon(1), 1, mpi_integer4, global%local_nlon(1), 1, mpi_integer4, mpi_comm_world, ierr)
+      ! call mpi_allgather(global%local_nlat(1), 1, mpi_integer4, global%local_nlat(1), 1, mpi_integer4, mpi_comm_world, ierr)
+   call global%set_nlon_nlat(priority=priority)
+      ! global%nlon = sum(global%local_nlon(:), dim=1)
+      ! global%nlat = local%nlat   !緯度方向優先で経度を分割しているため
 
 
-   ! define local lon-direction index on each rank
-   if (this == 1) then
-      local%i_e_begin = 1
-      local%i_e_end = local%nlon
-   else
-      local%i_e_begin = sum(global%local_nlon(1:this-1), dim=1) + 1
-      local%i_e_end = local%i_e_begin + local%nlon - 1
-   end if
    call mpi_barrier(mpi_comm_world, ierr)
    ! print *, this, ':', local%i_e_begin, local%i_e_end
 
@@ -130,7 +134,6 @@ program trial_mpi
 
    if (this == 1) then
       allocate(data_array(global%nlon, global%nlat), source=int2(0))
-      print *, 'final_tile%data allocated.'
       print *, 'global:', global%nlon*global%nlat, global%nlon, global%nlat
    end if
    call mpi_barrier(mpi_comm_world, ierr)
@@ -139,38 +142,42 @@ program trial_mpi
    print *, this, ':', n_send, local%nlon, local%nlat
    call mpi_barrier(mpi_comm_world, ierr)
 
-   !-- MPI Comm derived type definition
-   ! call mpi_type_vector()
-
+   ! -- MPI Comm derived type definition
+   ! call mpi_type_vector(local%nlon, local%nlat, local%nlat, mpi_integer2, t_integrate, ierr) ! FAILED
+   ! call mpi_type_subarray()
    ! call mpi_type_commit(t_integrate, ierr)
-   !--
+   ! --
 
 
 
 
 
    if (this == 1) then
-      print *, 'start data gather.'
+      print *, 'gather: start gather.'
    end if
-   ! ERROR test_07: invalid gather
-   call mpi_gather(single%data(1,1), n_send, mpi_integer2, data_array(1,1), n_send, mpi_integer2, 0, mpi_comm_world, ierr  )
-
-
-
+   ! ERROR test_22: PASS
+   call mpi_gather(single%data(1,1), n_send, mpi_integer2, data_array(1,1), n_send, mpi_integer2, 0, mpi_comm_world, ierr)
+   ! call mpi_gather(single%data(1,1), 1, t_integrate, data_array(1,1), 1, t_integrate, 0, mpi_comm_world, ierr)
+ 
    call mpi_barrier(mpi_comm_world, ierr)
    if (this == 1) then
-      print *, 'end data gather.'
+      print *, 'gather: end gather.'
    end if
 
-   if (allocated(single%data)) then
-      deallocate(single%data)
-   end if
+   ! if (allocated(single%data)) then
+   !    deallocate(single%data)
+   ! end if
 
    if (this == 1) then
+      ! call edge%set_four(0, 1, -1, 3)
+      ! call single%read_boundary(edge)
+      ! call nc_output(outnc, single)
+
       print *, 'multiple-process: nc making.'
       final_tile%p_data => data_array
       call final_tile%read_boundary(edge)
       call nc_output(outnc, final_tile)
+
       print *, 'multiple-process: nc outputted.'
    end if
 !--------------------------------------------------------!
