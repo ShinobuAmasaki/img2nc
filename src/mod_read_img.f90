@@ -14,6 +14,7 @@ module mod_read_img
       type(label), public :: label
    contains
       procedure :: set_name => image_set_name
+      procedure :: get_name => image_get_name
       procedure :: read_lbl => image_read_lbl
       procedure :: load_image => image_load_img
       procedure :: size_dem => image_size_dem
@@ -32,6 +33,15 @@ contains
       call self%label%set_name(code)
       return
    end subroutine image_set_name
+
+   function image_get_name(self) result(name)
+      class(image) :: self
+      character(len=256) :: name
+
+      name = self%filename
+
+   end function image_get_name
+
 
    subroutine image_read_lbl(self)
       class(image) :: self
