@@ -93,8 +93,6 @@ contains
          self%lat_end   = global%nlat_img
       end if
 
-      ! print *, 'priority: ', priority, ', lat_begin =', self%lat_begin, ', lat_end =', self%lat_end
-
    end subroutine divide_array_index
 
 
@@ -105,7 +103,6 @@ contains
       character(len=3), intent(in) :: priority
       integer(int32) :: n_img, n_mod, n_div, k
 
-      ! self%nlat_img = global%nlat_img
 
       self%nlon_img = global%nlon_img
       self%nlat_img = global%nlat_img
@@ -121,7 +118,6 @@ contains
       
       end if
 
-      ! print *,'nlon_img =', self%nlon_img, 'nlat_img =', self%nlat_img,'n_img =', n_img, 'n_div =', n_div, ' n_mod =', n_mod
 
       if (priority == 'lat') then
          self%nlon_img = n_img
@@ -143,8 +139,8 @@ contains
 
    end subroutine local_set_nlon_nlat
 
-!-- class procedure of type global_area
 
+!-- class procedure of type global_area
    subroutine global_init(self)
       class(global_area), intent(out) :: self
 
@@ -177,8 +173,6 @@ contains
       integer(int32), intent(in) :: petot
       character(len=3), intent(in) :: priority
       
-      ! print *,'wesn:', edge%get_west(), edge%get_east(), edge%get_south(), edge%get_north()
-
       self%west = edge%get_west()
       self%east = edge%get_east()
       self%south = edge%get_south()
@@ -211,6 +205,7 @@ contains
       call mpi_allgather(self%local_nlat(1), 1, mpi_integer4, self%local_nlat(1), 1, mpi_integer4, comm, ierr)
 
    end subroutine gather_local_nlon_nlat
+
 
    subroutine global_set_nlon_nlat(self, priority)
       class(global_area), intent(inout) :: self
