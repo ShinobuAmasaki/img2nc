@@ -63,7 +63,6 @@ program main
 
    !-- array of tiles
    allocate( array(global%nlon_img, global%nlat_img))
-   call mpi_barrier(mpi_comm_world, ierr)
 
 !---------------------------------------------------------!
    !-- loading img files
@@ -86,11 +85,9 @@ program main
 
       end do 
    end do
-   call mpi_barrier(mpi_comm_world, ierr)
 
    !-- merge tiles on each rank
    call merge_tiles(array(local%lon_begin:local%lon_end, local%lat_begin:local%lat_end), single)
-   call mpi_barrier(mpi_comm_world, ierr)
 
 !---------------------------------------------------------!
 !---                  Single processing                ---!
@@ -118,7 +115,7 @@ program main
    ! globalに各localのnlon,nlatをallgatherする。
    call global%gather_local_nlon_nlat(local, mpi_comm_world, ierr)
    call global%set_nlon_nlat(priority=priority)
-   call mpi_barrier(mpi_comm_world, ierr)
+
 
    !-- gather into the rank=0 process
   
@@ -129,7 +126,6 @@ program main
 
    ! size of sending data
    n_send = local%nlon*local%nlat
-   call mpi_barrier(mpi_comm_world, ierr)
 
    call mpi_gather(single%data(1,1), n_send, mpi_integer2, data_array(1,1), n_send, mpi_integer2, 0, mpi_comm_world, ierr)
 
