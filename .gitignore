@@ -41,3 +41,6 @@
 # directories
 test/
 dat/
+
+# sabotage
+env.sh
