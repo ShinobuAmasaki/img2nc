@@ -6,7 +6,6 @@ For those who want to draw a topographic map of the Moon.
 
 
 ## Abstract
-
 This software has the following roles to:
 
 - Download the DEM data of **SLDEM2013**
@@ -18,37 +17,45 @@ This software has the following roles to:
 This project managed by [**Fortran Package Manager (FPM)**](https://github.com/fortran-lang/fpm) so we recommend to use it to build this software. 
 
 This software depends on:
-
-- GNU Fortran (gfortran)
+- GNU Fortran (gfortran) or Intel Fortran Compiler (ifort, ifx)
+- MPI Library (for parallel execution)
 - [**Unidata NetCDF Fortran Library**](https://www.unidata.ucar.edu/software/netcdf/).
 - wget (to download DEM data)
 
-[^1]: Digital Elevation Model（数値標高地図）
-[^2]: [Institute of Space and Astronautical Science, Japan Aerospace Exploration Agency - 宇宙航空研究開発機構　宇宙科学研究所](https://www.isas.jaxa.jp/)
-
-#### Operation check
-
+### Operation check
 We have checked the operation on the following Linux OS:
-
-- Ubuntu Desktop 22.04 LTS
-- openSUSE Linux Tumbleweed
+- Ubuntu Desktop 22.04 LTS (gfortran/OpenMPI, Intel Fortran)
+- Gentoo Linux (gfortran/OpenMPI)
 
 
 ## Installation
+1. Install compiler, MPI library and FPM.
+2. Install NetCDF Fortran Library (cf. [the Documentation](https://docs.unidata.ucar.edu/netcdf-fortran/current/))
+3. Download the tarball of this project.
 
-1. Install NetCDF Fortran Library (cf. [the Documentation](https://docs.unidata.ucar.edu/netcdf-fortran/current/))
-2. Build with `fpm`
+   ```bash
+	$ wget https://github.com/ShinobuAmasaki/img2nc/archive/refs/tags/v2.0.0.tar.gz
+	$ tar xzf v2.0.0.tar.gz
+	$ cd img2nc-2.0.0
+	```
 
-```bash
-$ git clone 
-$ cd img2nc
-$ fpm build --flag "-I/<netcdf-fortran-include-dir>" --link-flag "-L/<netcdf-fortran-library-dir>"
-```
+4. Build with `fpm`
+
+	```bash
+	$ fpm build --compiler mpif90 \
+			 --flag "-I/<mpi-include-path> -I/<netcdf-fortran-include>" \
+			 --link-flag "-L/<mpi-library-path> -L/<netcdf-fortran-lib-dir>"
+	```
+
+5. Install into any directory
+   
+	```bash
+	$ fpm install --prefix <directory>
+	```
 
 Then, you can find the executable file on `img2nc/build/gfortran_XXX/img2nc` 
 
-#### e.g. on Ubuntu 22.04 LTS
-
+### e.g. on Ubuntu 22.04 LTS
 We will show you the installation procedure in Ubuntu 22.04 LTS as an example.
 
 ``` bash
@@ -70,13 +77,10 @@ $ chmod +x fpm-0.5.0-linux-x86_64
 $ fpm build --flag "-I/usr/include" --link-flag "-L/lib/x86_64-linux-gnu"
 ```
 
-
 ## Usage
-
 As an example, let's draw  Lambert crater at 21 deg. west longitude and 26 deg. north latitude on the front side of the Moon.
 
-#### Downloading DEM
-
+### Downloading DEM
 First, determine the drawing range and download the DEM data. Specify the latitudes and longitudes of the coordinates as command line arguments when executing the shell script: `west/east/south/north`. 
 
 The longitude is specified in the range of 0 to 360 with the eastern direction as the positive with respect to the center of the Moon. The Latitude is specified in the range of -90 to 90 with the north direction as positive and the south direction as negative based on the Moon equator[^3].
@@ -89,10 +93,8 @@ $ ./dl_sldem2013 -d ./dat 338/341/24/27
 
 Specify the directory to download with `-d` option argument.
 
-[^3]: It is not yet possible to specify a range that intersects the 0 deg. longitude line.
 
-#### Execution
-
+### Execution
 Execute the command `img2nc`.
 
 ```
@@ -103,8 +105,17 @@ You can see how to use the optional arguments with `img2nc -h`.
 
 After the execution, you will get the NetCDF file `out.nc`.
 
-#### Drawing
+#### Parallel Processing
+Execute `img2nc` with `mpiexec`.
 
+```
+$ mpiexec -n 3 img2nc -d ./dat -o out.nc -r 339/341/24/27
+```
+
+Specify the number of processor elements with `-n` or `-np` option which must be less than or equal to the longitude width.
+
+
+### Drawing
 You can draw a topographic map using `out.nc`, such as by GMT[^4].
 
 ```bash
@@ -120,17 +131,21 @@ gmt begin lambart png
 gmt end
 ```
 
-Executing this shell script, following figure `lambert.png` is outputted. See [GMT Documentation 6.3.0](https://docs.generic-mapping-tools.org/latest/)  on how to use GMT.
+Executing this shell script, following figure `lambert.png` is outputted.
+See [GMT Documentation](https://docs.generic-mapping-tools.org/latest/) on how to use GMT.
 
 ![lambart](https://user-images.githubusercontent.com/100006043/174430799-5b3f654a-1a47-48d0-ac9e-32976f05390c.png)
 
-[^4]: Generic Mapping Tools: https://www.generic-mapping-tools.org/
-
 
 ## Future works
-
 In the future, we would like to implement the following feature:
 
-- Patch for Intel Fortran Compiler (ifort)
-- Parallel processing
+- coarse graining
+- ✅support Intel Fortran Compiler
+- ✅parallel processing
+- Support MOLA data (Mars DEM)
 
+[^1]: Digital Elevation Model（数値標高地図）
+[^2]: [Institute of Space and Astronautical Science, Japan Aerospace Exploration Agency - 宇宙航空研究開発機構　宇宙科学研究所](https://www.isas.jaxa.jp/)
+[^3]: It is not yet possible to specify a range that intersects the 0 deg. longitude line.
+[^4]: Generic Mapping Tools: https://www.generic-mapping-tools.org/
