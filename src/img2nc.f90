@@ -47,7 +47,8 @@ contains
 
       return
    end subroutine lnc_set_name_from_string
-   
+
+
 !-- receive type: Tile
    subroutine lnc_set_length(self, single)
       class(LunarNC) :: self
@@ -82,8 +83,6 @@ contains
       self%step_lon = (dble(east) - dble(west))/dble(self%nx)
       self%step_lat = (dble(north) - dble(south))/dble(self%ny)
 
-      ! print *, "Grid step: ", self%step_lon, self%step_lat
-
    end subroutine lnc_set_step_from_tile
 
    
@@ -95,12 +94,10 @@ contains
       allocate(self%lon(self%nx), self%lat(self%ny))
 
       do i = 1, self%nx
-         ! self%lon(i) = single%lon(i)
          self%lon(i) = self%step_lon*(i-1) + dble(single%west_lon)
       end do
 
       do i = 1, self%ny
-         ! self%lat(i) = single%lat(i)
          self%lat(i) = -self%step_lat*(i-1) + dble(single%north_lat)
       end do
 
@@ -147,15 +144,12 @@ contains
       end if
    end subroutine lnc_load_data_nc_from_tile
 
+
    subroutine lnc_load_data_nc_from_array(self, array)
       class(LunarNC) :: self
       integer(int16) :: array(:,:)
       integer(int32) :: j
 
-      ! allocate(self%data(self%nx, self%ny))
-      ! do i = 1, self%nx
-      !    self%data(i,:) = dble(array(i,:))
-      ! end do
       allocate(self%data(self%nx, self%ny))
       do j = 1, self%ny
          self%data(:,j) = dble(array(:,j))
@@ -212,36 +206,6 @@ contains
       end if
    end subroutine check
 
-   
-   ! subroutine read_tile_list(filename, name_list)
-   ! !-- DEPRECATED --!
-   !    character(len=256), intent(in) :: filename
-   !    character(len=256), intent(out), allocatable :: name_list(:,:)
-   !    integer(int32) :: siz_lon, siz_lat
-   !    integer(int32) :: unit
-
-   !    !リストファイルを開く。
-   !    open(file=filename, status='old', newunit=unit)
-   !    !ヘッダーの読み取り
-   !    read(unit, *) siz_lon, siz_lat
-
-   !    !エラー処理
-   !    call tile_size_check(siz_lon, siz_lat, unit)
-
-   !    !ファイル名の読み込み先を割り付ける。
-   !    allocate( name_list(siz_lon, siz_lat) )
-
-   !    !リストの読み込み(列優先)
-   !    do i = 1, siz_lon
-   !       do j = 1, siz_lat
-   !          read(unit, '(a)') name_list(i,j)
-   !       end do
-   !    end do
-      
-   !    !ファイルを閉じる。
-   !    close(unit)
-   
-   ! end subroutine read_tile_list
 
    subroutine allocate_name_list(name_list, edge)
       character(len=256), intent(out), allocatable :: name_list(:,:)
@@ -267,8 +231,6 @@ contains
       character(len=4) :: e_west, e_east
       character(len=3) :: e_north, e_south
 
-      code = ''
-
       !e.g. DTM_MAP_01_N44E323N43E324SC.img
       if (west == 359) then
          !東端が360度となる場合は、変数eastに整数0を代入する。
@@ -276,8 +238,6 @@ contains
       else
          east = west + 1
       end if
-
-      ! print *, 'west =', west, ' north =', north ! PASS
 
       south = north - 1 
 
@@ -308,9 +268,8 @@ contains
 
       code = prefix // e_north // e_west // e_south // e_east // postfix
 
-      ! print *, code ! PASS
-
    end subroutine create_data_name
+
 
    subroutine create_name_list(data_root, list, edge)
       character(len=*), intent(in) :: data_root
@@ -324,27 +283,6 @@ contains
 
       siz_lon = edge%get_east() - edge%get_west()
       siz_lat = edge%get_north() - edge%get_south()
-
-      ! print *, 'siz_lon =', siz_lon, ' siz_lat =', siz_lat
-
-      ! do j = 1, siz_lat
-      !    e_north = edge%get_south() + j
-      !    jj = siz_lat - j + 1
-
-      !    do i = 1, siz_lon
-      !       !東端と北端の経緯度を計算する。
-      !       e_west = edge%get_east() - i
-      !       ii = siz_lon - i + 1
-
-      !       call create_data_name(e_west, e_north, code)
-
-      !       write(lon_dir, '(a,i3.3)') 'lon', e_west
-
-      !       name_list(ii, jj) = trim(data_root) // '/' // trim(lon_dir) // '/' // code
-      !       ! インデックスの指定を変更しない：マージ時のタイル配置に影響する
-
-      !    end do
-      ! end do
 
       do j = 1, siz_lat
          !北から南へ
@@ -373,44 +311,6 @@ contains
 
    end subroutine create_name_list
 
-   ! subroutine create_name_list_4var(data_root, name_list, west, east, south, north)
-   !    character(len=*), intent(in) :: data_root
-   !    integer(int32), intent(in) :: west, east, south, north
-   !    character(len=256), intent(out), allocatable :: name_list(:,:)
-   !    character(len=27) :: code
-   !    integer(int32) :: siz_lon, siz_lat, i, j, e_west, e_north
-   !    character(len=6) :: lon_dir
-
-   !    !配列のサイズを求める。
-   !    siz_lon = east - west
-   !    siz_lat = north - south
-
-   !    ! print *, siz_lon, siz_lat
-
-   !    !配列サイズのチェック
-   !    call tile_size_check(siz_lon, siz_lat)
-
-   !    !配列の割り付け
-   !    allocate( name_list(siz_lon, siz_lat) )
-
-   !    do j = 1, siz_lat
-   !       e_north = south + j
-
-   !       do i = 1, siz_lon
-   !          !東端と北端の経緯度を計算する。
-   !          e_west = east - i
-
-   !          call create_data_name(e_west, e_north, code)
-
-   !          write(lon_dir, '(a,i3.3)') 'lon', e_west
-
-   !          !南東の角から順番に書き込む
-   !          name_list(siz_lon-i+1,siz_lat-j+1) = trim(data_root) // '/' // trim(lon_dir) // '/' // code
-   !          ! インデックスの指定を変更しない：マージ時のタイル配置に影響する
-   !       end do
-   !    end do
-
-   ! end subroutine create_name_list_4var
 
    !リストファイルのヘッダーの数値をチェックする。
    subroutine tile_size_check(nx, ny, unit)
@@ -486,6 +386,7 @@ contains
          end do
       end do
    end subroutine load_img_to_tile
+
 
    ! set lon/lat edge value into a single tile
    function north_lat_from_tile_array(array, i_begin) result(north)
@@ -579,25 +480,6 @@ contains
 
       !タイル配列の値を集約タイルにコピーして連結する。
       print *, 'merge: Start merging.'
-      ! do i = 1, siz_lon
-      !    !ローカルの始点・終点の列を定義する。
-      !    start_i = 1 + (i-1)*samples
-      !    end_i = i*samples
-         
-      !    do j = 1, siz_lat
-      !       !ローカルの始点・終点の行を定義する。
-      !       start_j = 1 + (j-1)*samples
-      !       end_j = j*samples
-
-      !       !ローカルのループをして、データを集約タイルにコピーする。
-      !       do ii = 1, samples
-      !          do jj = 1, samples
-      !             result%data(start_i+ii-1,end_j-jj+1) = array(i,j)%data(ii,jj)
-      !          end do
-      !       end do
-
-      !    end do
-      ! end do
 
       do j = 1, siz_lat
          start_j = 1 + (j-1)*samples
