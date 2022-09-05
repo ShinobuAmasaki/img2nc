@@ -1,6 +1,7 @@
 module mod_array_division
    use, intrinsic :: iso_fortran_env
    use mpi_f08
+   use mod_boundary
    use mod_read_img
    implicit none
 
@@ -92,26 +93,42 @@ contains
          self%lat_end   = global%nlat_img
       end if
 
+      ! print *, 'priority: ', priority, ', lat_begin =', self%lat_begin, ', lat_end =', self%lat_end
+
    end subroutine divide_array_index
 
 
-   subroutine preload_local_area_setting(self, global, this_number)
+   subroutine preload_local_area_setting(self, global, this_number, priority)
       class(local_area), intent(inout) :: self
       type(global_area), intent(in) :: global
       integer(int32), intent(in) :: this_number
-      integer(int32) :: n_mod, n_div, k
+      character(len=3), intent(in) :: priority
+      integer(int32) :: n_img, n_mod, n_div, k
 
+      ! self%nlat_img = global%nlat_img
+
+      self%nlon_img = global%nlon_img
       self%nlat_img = global%nlat_img
 
       n_div = global%n_div
       n_mod = global%n_mod
 
       if (this_number <= n_mod) then
-
-         self%nlon_img = n_div + 1
+         n_img = n_div + 1
+      
       else
+         n_img = n_div
+      
+      end if
 
-         self%nlon_img = n_div
+      ! print *,'nlon_img =', self%nlon_img, 'nlat_img =', self%nlat_img,'n_img =', n_img, 'n_div =', n_div, ' n_mod =', n_mod
+
+      if (priority == 'lat') then
+         self%nlon_img = n_img
+
+      else if (priority == 'lon') then
+         self%nlat_img = n_img
+
       end if
 
    end subroutine preload_local_area_setting
@@ -153,15 +170,29 @@ contains
    end subroutine global_init
 
 
-   subroutine preload_global_area_setting(self, name_list, petot)
+   subroutine preload_global_area_setting(self, edge, petot, priority)
       class(global_area), intent(inout) :: self
-      character(len=*), intent(in) :: name_list(:,:)
+      ! character(len=*), intent(in) :: name_list(:,:)
+      type(boundary), intent(in) :: edge
       integer(int32), intent(in) :: petot
+      character(len=3), intent(in) :: priority
       
-      self%nlon_img = size(name_list, dim=1)
-      self%nlat_img = size(name_list, dim=2)
+      ! print *,'wesn:', edge%get_west(), edge%get_east(), edge%get_south(), edge%get_north()
 
-      self%n_div = self%nlon_img / petot
+      self%west = edge%get_west()
+      self%east = edge%get_east()
+      self%south = edge%get_south()
+      self%north = edge%get_north()
+
+      self%nlon_img = self%east - self%west
+      self%nlat_img = self%north - self%south
+
+      if (priority == 'lat') then
+         self%n_div = self%nlon_img / petot
+      else if (priority == 'lon') then
+         self%n_div = self%nlat_img / petot
+      end if
+
       self%n_mod = mod(self%nlon_img, petot)
 
    end subroutine preload_global_area_setting

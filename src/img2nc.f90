@@ -36,10 +36,6 @@ module img2nc
 
    end type LunarNC
 
-   interface create_name_list
-      module procedure create_name_list_edge, create_name_list_4var
-   end interface
-
 
 contains
       
@@ -247,15 +243,31 @@ contains
    
    ! end subroutine read_tile_list
 
+   subroutine allocate_name_list(name_list, edge)
+      character(len=256), intent(out), allocatable :: name_list(:,:)
+      type(boundary), intent(in) :: edge
+      integer(int32) :: lon_size, lat_size
 
-   subroutine create_data_name(west, north, name)
+      lon_size = edge%get_east() - edge%get_west()
+      lat_size = edge%get_north() - edge%get_south()
+
+      call tile_size_check(lon_size, lat_size)
+
+      allocate(name_list(lon_size, lat_size))
+
+   end subroutine allocate_name_list
+
+
+   subroutine create_data_name(west, north, code)
       integer(int32), intent(in) :: west, north
       integer(int32) :: east, south
-      character(len=*), intent(out) :: name
+      character(len=*), intent(out) :: code
       character(len=11) :: prefix
       character(len=2) :: postfix
       character(len=4) :: e_west, e_east
       character(len=3) :: e_north, e_south
+
+      code = ''
 
       !e.g. DTM_MAP_01_N44E323N43E324SC.img
       if (west == 359) then
@@ -265,86 +277,140 @@ contains
          east = west + 1
       end if
 
+      ! print *, 'west =', west, ' north =', north ! PASS
+
       south = north - 1 
 
-      prefix = 'DTM_MAP_01_'
-      postfix = 'SC'
+      prefix = 'DTM_MAP_01_'  ! 11
+      postfix = 'SC'          ! 2
 
       ! 西端と東端の記述
-      write(e_west, '(a, i3.3)') 'E', west 
-      write(e_east, '(a, i3.3)') 'E', east
+      write(e_west, '(a, i3.3)') 'E', west ! 4
+      write(e_east, '(a, i3.3)') 'E', east ! 4
 
       !北端の記述
       if ( north >= 0 ) then
-         write(e_north, '(a, i2.2)') 'N', abs(north)
+         write(e_north, '(a, i2.2)') 'N', abs(north) ! 3
 
       else if ( north < 0 ) then
-         write(e_north, '(a, i2.2)') 'S', abs(north)
+         write(e_north, '(a, i2.2)') 'S', abs(north) ! 3
       
       end if
 
       !南端の記述
       if ( south >= 0 ) then
-         write(e_south, '(a, i2.2)') 'N', abs(south)
+         write(e_south, '(a, i2.2)') 'N', abs(south) ! 3
 
       else if ( south < 0 ) then
-         write(e_south, '(a, i2.2)') 'S', abs(south)
+         write(e_south, '(a, i2.2)') 'S', abs(south) ! 3
 
       end if
 
-      name = prefix // e_north // e_west // e_south // e_east // postfix
+      code = prefix // e_north // e_west // e_south // e_east // postfix
+
+      ! print *, code ! PASS
 
    end subroutine create_data_name
 
-!
-   subroutine create_name_list_4var(data_root, west, east, south, north, name_list)
+   subroutine create_name_list(data_root, list, edge)
       character(len=*), intent(in) :: data_root
-      integer(int32), intent(in) :: west, east, south, north
-      character(len=256), intent(out), allocatable :: name_list(:,:)
+      type(boundary), intent(inout) :: edge
+      character(len=256), intent(out) :: list(:,:)
+         ! assume name_list is already allocated
       character(len=27) :: code
-      integer(int32) :: siz_lon, siz_lat, i, j, e_west, e_north
+      integer(int32) :: siz_lon, siz_lat, i, j, ii, jj, e_west, e_north
       character(len=6) :: lon_dir
 
-      !配列のサイズを求める。
-      siz_lon = east - west
-      siz_lat = north - south
 
-      ! print *, siz_lon, siz_lat
+      siz_lon = edge%get_east() - edge%get_west()
+      siz_lat = edge%get_north() - edge%get_south()
 
-      !配列サイズのチェック
-      call tile_size_check(siz_lon, siz_lat)
+      ! print *, 'siz_lon =', siz_lon, ' siz_lat =', siz_lat
 
-      !配列の割り付け
-      allocate( name_list(siz_lon, siz_lat) )
+      ! do j = 1, siz_lat
+      !    e_north = edge%get_south() + j
+      !    jj = siz_lat - j + 1
+
+      !    do i = 1, siz_lon
+      !       !東端と北端の経緯度を計算する。
+      !       e_west = edge%get_east() - i
+      !       ii = siz_lon - i + 1
+
+      !       call create_data_name(e_west, e_north, code)
+
+      !       write(lon_dir, '(a,i3.3)') 'lon', e_west
+
+      !       name_list(ii, jj) = trim(data_root) // '/' // trim(lon_dir) // '/' // code
+      !       ! インデックスの指定を変更しない：マージ時のタイル配置に影響する
+
+      !    end do
+      ! end do
 
       do j = 1, siz_lat
-         e_north = south + j
+         !北から南へ
+         e_north = edge%get_north() - j + 1
 
          do i = 1, siz_lon
-            !東端と北端の経緯度を計算する。
-            e_west = east - i
+            !西から東へ
+            e_west = edge%get_west() + i - 1
 
+            ! print *, 'e_west =', e_west, ' e_north =', e_north ! PASS
+            
             call create_data_name(e_west, e_north, code)
+
+            ! print *, code   ! PASS
 
             write(lon_dir, '(a,i3.3)') 'lon', e_west
 
-            !南東の角から順番に書き込む
-            name_list(siz_lon-i+1,siz_lat-j+1) = trim(data_root) // '/' // trim(lon_dir) // '/' // code
-            ! インデックスの指定を変更しない：マージ時のタイル配置に影響する
+            ! print *, 'lon_dir =', lon_dir !PASS
+
+            list(i,j) = trim(data_root) // '/' // trim(lon_dir) // '/' // code
+
+            ! print *, 'list: i=', i, ', j=', j, ': ', trim(list(i,j)) !PASS
+
          end do
       end do
 
-   end subroutine create_name_list_4var
+   end subroutine create_name_list
 
+   ! subroutine create_name_list_4var(data_root, name_list, west, east, south, north)
+   !    character(len=*), intent(in) :: data_root
+   !    integer(int32), intent(in) :: west, east, south, north
+   !    character(len=256), intent(out), allocatable :: name_list(:,:)
+   !    character(len=27) :: code
+   !    integer(int32) :: siz_lon, siz_lat, i, j, e_west, e_north
+   !    character(len=6) :: lon_dir
 
-   subroutine create_name_list_edge(data_root, edge, name_list)
-      character(len=*), intent(in) :: data_root
-      type(boundary), intent(in) :: edge
-      character(len=256), intent(out), allocatable :: name_list(:,:)
+   !    !配列のサイズを求める。
+   !    siz_lon = east - west
+   !    siz_lat = north - south
 
-      call create_name_list_4var(data_root, edge%get_west(), edge%get_east(), edge%get_south(), edge%get_north(), name_list)
+   !    ! print *, siz_lon, siz_lat
 
-   end subroutine create_name_list_edge
+   !    !配列サイズのチェック
+   !    call tile_size_check(siz_lon, siz_lat)
+
+   !    !配列の割り付け
+   !    allocate( name_list(siz_lon, siz_lat) )
+
+   !    do j = 1, siz_lat
+   !       e_north = south + j
+
+   !       do i = 1, siz_lon
+   !          !東端と北端の経緯度を計算する。
+   !          e_west = east - i
+
+   !          call create_data_name(e_west, e_north, code)
+
+   !          write(lon_dir, '(a,i3.3)') 'lon', e_west
+
+   !          !南東の角から順番に書き込む
+   !          name_list(siz_lon-i+1,siz_lat-j+1) = trim(data_root) // '/' // trim(lon_dir) // '/' // code
+   !          ! インデックスの指定を変更しない：マージ時のタイル配置に影響する
+   !       end do
+   !    end do
+
+   ! end subroutine create_name_list_4var
 
    !リストファイルのヘッダーの数値をチェックする。
    subroutine tile_size_check(nx, ny, unit)
