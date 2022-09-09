@@ -19,7 +19,7 @@ program main
    type(Tile), allocatable :: array(:,:)
    type(Tile) :: single, final_tile
    type(Image) :: img
-   integer(int32) :: count, total, lon_size
+   integer(int32) :: count, total, lat_size
 
    type(global_area) :: global
    type(local_area) :: local
@@ -29,24 +29,29 @@ program main
    integer(int32) :: n_send
    integer(int16), allocatable, target :: data_array(:,:)
 
+   integer(int32) :: coarse
+
 !-- MPI init
    call mpi_init(ierr)
    call mpi_comm_size(mpi_comm_world, petot, ierr)
    call mpi_comm_rank(mpi_comm_world, this_rank, ierr)
    this = this_rank + 1
 
+   coarse = 16 ! this is default setting for coarse grainning
+
 !---------------------------------------------------------!
 
-   call preprocess(data_dir, outnc, range, edge)
+   call preprocess(data_dir, outnc, range, edge, coarse)
 
-   call create_name_list(data_dir, edge, name_list)
+   call allocate_name_list(name_list, edge)
+   call create_name_list(data_dir, name_list, edge)
 
    !-- maximum parallelization
-   lon_size = size(name_list, dim=1)
-   if (lon_size < petot) then
+   lat_size = size(name_list, dim=2)
+   if (lat_size < petot) then
       
       if (this == 1) then
-         print *, 'Error: The number of processor elements is too large than longitude width.'
+         print *, 'Error: The number of processor elements is too large than latitude width.'
       end if
       call mpi_finalize()
       stop
@@ -56,8 +61,8 @@ program main
    call global%init()
    call local%init()
 
-   call global%preload_global_area_setting(name_list, petot)
-   call local%preload_local_area_setting(global, this)
+   call global%preload_global_area_setting(edge, petot, priority=priority)
+   call local%preload_local_area_setting(global, this, priority=priority)
    call local%divide_array_index(global, this, priority=priority)
 
 
@@ -78,7 +83,7 @@ program main
 
          call img%load_image()
 
-         array(i,j) = img%img2tile(16)
+         array(i,j) = img%img2tile(coarse)
          count = count + 1
          print '(a,i3,a,i3,a,i3)', 'loaded: ' // trim(name_list(i,j))// ', on Process No.', this, ': ', count, '/', total
          call img%clear()
@@ -128,6 +133,11 @@ program main
    n_send = local%nlon*local%nlat
 
    call mpi_gather(single%data(1,1), n_send, mpi_integer2, data_array(1,1), n_send, mpi_integer2, 0, mpi_comm_world, ierr)
+
+   ! deallocate data after gather completed.
+   if (allocated(single%data)) then
+      deallocate(single%data)
+   end if
 
 !---------------------------------------------------------!
    ! Make NetCDF file
