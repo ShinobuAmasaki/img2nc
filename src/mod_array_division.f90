@@ -25,9 +25,7 @@ module mod_array_division
       integer(int32) :: nlon, nlat
       integer(int32) :: nlon_img, nlat_img
       integer(int32) :: lon_begin, lon_end
-      ! integer(int32) :: lon_e_begin, lon_e_end
       integer(int32) :: lat_begin, lat_end
-      ! integer(int32) :: lat_e_begin, lat_e_end
    contains
       procedure :: init => local_init
       procedure :: preload_local_area_setting
@@ -51,27 +49,29 @@ contains
       self%lat_end   = 0
    end subroutine local_init
 
-   subroutine divide_array_index(self,global, this_number, priority)
+   subroutine divide_array_index(self,global, this_number, petot, priority)
       class(local_area), intent(inout) :: self
       type(global_area), intent(in) :: global
-      integer(int32), intent(in) :: this_number
+      integer(int32), intent(in) :: this_number, petot
       character(len=*), intent(in) :: priority
-      integer(int32) :: n_mod, n_div, n_begin, n_end
+      integer(int32) :: n_mod, n_div, n_begin, n_end, n_forward
 
       n_mod = global%n_mod
       n_div = global%n_div
+      n_forward = petot - n_mod
 
       if (n_mod /= 0) then
          !割り切れない場合
-         if (this_number <= n_mod) then
-            !余りを分配する前方のイメージについて
-            n_begin = (n_div + 1)*(this_number - 1) + 1
-            n_end   = n_begin + n_div 
-         
-         else
-            !余りを分配しない後方のイメージについて
-            n_begin = (n_div + 1)*n_mod + n_div*(this_number - n_mod - 1) + 1
+         if (this_number <= n_forward) then
+            ! 前方のプロセス
+            ! 余りを分配しない
+            n_begin = n_div * (this_number - 1) + 1
             n_end   = n_begin + n_div - 1
+         else
+            ! 後方のプロセス
+            ! 余りを分配する
+            n_begin = n_div*n_forward + (n_div + 1)*(this_number - n_forward - 1) + 1
+            n_end   = n_begin + n_div
          end if
 
       else
@@ -98,28 +98,27 @@ contains
    end subroutine divide_array_index
 
 
-   subroutine preload_local_area_setting(self, global, this_number, priority)
+   subroutine preload_local_area_setting(self, global, this_number, petot, priority)
       class(local_area), intent(inout) :: self
       type(global_area), intent(in) :: global
-      integer(int32), intent(in) :: this_number
+      integer(int32), intent(in) :: this_number, petot
       character(len=3), intent(in) :: priority
-      integer(int32) :: n_img, n_mod, n_div, k
+      integer(int32) :: n_img, n_div, k, n_forward
 
 
       self%nlon_img = global%nlon_img
       self%nlat_img = global%nlat_img
 
       n_div = global%n_div
-      n_mod = global%n_mod
+      n_forward = petot - global%n_mod
 
-      if (this_number <= n_mod) then
-         n_img = n_div + 1
-      
-      else
+      if (this_number <= n_forward) then
          n_img = n_div
       
+      else
+         n_img = n_div + 1
+      
       end if
-
 
       if (priority == 'lat') then
          self%nlon_img = n_img

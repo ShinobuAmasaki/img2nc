@@ -19,12 +19,12 @@ program main
    type(Tile), allocatable :: array(:,:)
    type(Tile) :: single, final_tile
    type(Image) :: img
-   integer(int32) :: count, local_total, lat_size
+   integer(int32) :: count, local_img_total, non_priority_direction_size
 
    type(global_area) :: global
    type(local_area) :: local
    type(boundary) :: edge
-   character(len=3) :: priority='lon'
+   character(len=3) :: priority='lon' ! priority='lat' is still unacceptable
 
    integer(int32) :: n_send, offset, n_recv
    integer(int16), allocatable, target :: data_array(:,:)
@@ -48,14 +48,28 @@ program main
    call create_name_list(data_dir, name_list, edge)
 
    !-- maximum parallelization
-   lat_size = size(name_list, dim=2)
-   if (lat_size < petot) then
-      
-      if (this == 1) then
-         print *, 'Error: The number of processor elements is too large than latitude width.'
+   if (priority == 'lon') then
+      non_priority_direction_size = size(name_list, dim=2) ! lat_size
+
+      if (non_priority_direction_size < petot) then
+         if (this == 1) then
+            print *, 'Error: The number of processor elements is too large than latitude width.'
+         end if
+         call mpi_finalize()
+         stop
       end if
-      call mpi_finalize()
-      stop
+
+   else if (priority == 'lat') then
+      non_priority_direction_size = size(name_list, dim=1) ! lon_size
+
+      if (non_priority_direction_size < petot) then
+         if (this == 1) then
+            print *, 'ERROR:  The number of processor elements is too large than longitude width.'
+         end if
+         call mpi_finalize()
+         stop
+      end if
+
    end if
 
    !-- global & local settings
@@ -63,8 +77,8 @@ program main
    call local%init()
 
    call global%preload_global_area_setting(edge, petot, priority=priority)
-   call local%preload_local_area_setting(global, this, priority=priority)
-   call local%divide_array_index(global, this, priority=priority)
+   call local%preload_local_area_setting(global, this, petot, priority=priority)
+   call local%divide_array_index(global, this, petot, priority=priority)
 
 
    !-- array of tiles
@@ -73,7 +87,7 @@ program main
 !---------------------------------------------------------!
    !-- loading img files
    count = 0
-   local_total = local%nlon_img * local%nlat_img
+   local_img_total = local%nlon_img * local%nlat_img
 
    do j = local%lat_begin, local%lat_end
       do i = local%lon_begin, local%lon_end
@@ -86,7 +100,7 @@ program main
 
          array(i,j) = img%img2tile(coarse)
          count = count + 1
-         print '(a,i3,a,i3,a,i3)', 'loaded: ' // trim(name_list(i,j))// ', on Process No.', this, ': ', count, '/', local_total
+         print '(a,i3,a,i3,a,i3)', 'loaded: ' // trim(name_list(i,j))// ', on Process No.', this, ': ', count, '/', local_img_total
          call img%clear()
 
       end do 
