@@ -30,7 +30,11 @@ We have checked the operation on the following Linux OS:
 
 ## Installation
 1. Install compiler, MPI library and FPM.
+
 2. Install NetCDF Fortran Library (cf. [the Documentation](https://docs.unidata.ucar.edu/netcdf-fortran/current/))
+
+	If we use gfortran, we may be able to use a package manager to install this. Using Intel Compiler, however, we have to build the NetCDF library ourself with it.
+
 3. Download the tarball of this project.
 
    ```bash
@@ -53,10 +57,10 @@ We have checked the operation on the following Linux OS:
 	$ fpm install --prefix <directory>
 	```
 
-Then, you can find the executable file on `<directory>/bin/img2nc` 
+Then, we can find the executable file on `<directory>/bin/img2nc` 
 
 ### e.g. on Ubuntu 22.04 LTS
-We will show you the installation procedure in Ubuntu 22.04 LTS as an example.
+We will look the installation procedure in Ubuntu 22.04 LTS as an example.
 
 ``` bash
 $ sudo apt install gfortran openmpi-bin libnetcdff-dev
@@ -108,9 +112,9 @@ Execute the command `img2nc`.
 $ img2nc -d ./dat -o out.nc -r 338/341/24/27
 ```
 
-You can see how to use the optional arguments with `img2nc -h`.
+We can see how to use the optional arguments with `img2nc -h`.
 
-After the execution, you will get the NetCDF file `out.nc`.
+After the execution, we will get the NetCDF file `out.nc`.
 
 #### Parallel Processing
 Execute `img2nc` with `mpiexec`.
@@ -123,7 +127,7 @@ Specify the number of processor elements with `-n` or `-np` option which must be
 
 
 ### Drawing
-You can draw a topographic map using `out.nc`, such as by GMT[^4].
+We can draw a topographic map using `out.nc`, such as by GMT[^4].
 
 ```bash
 #!/bin/bash
@@ -143,13 +147,12 @@ See [GMT Documentation](https://docs.generic-mapping-tools.org/latest/) on how t
 
 ![lambart](https://user-images.githubusercontent.com/100006043/174430799-5b3f654a-1a47-48d0-ac9e-32976f05390c.png)
 
-
 ## Future works
 In the future, we would like to implement the following feature:
 
-- ✅coarse vision
-- ✅support Intel Fortran Compiler
-- ✅parallel processing
+- ✅Coarse vision
+- ✅Support Intel Fortran Compiler
+- ✅Parallel processing
 - Support MOLA data (Mars DEM)
 
 [^1]: Digital Elevation Model（数値標高地図）
