@@ -17,6 +17,8 @@ module mod_array_division
       procedure :: preload_global_area_setting
       procedure :: gather_local_nlon_nlat
       procedure :: set_nlon_nlat => global_set_nlon_nlat
+      procedure :: recv_offset
+      procedure :: recv_num
    end type global_area
 
    type :: local_area
@@ -226,5 +228,37 @@ contains
       self%nlat = nlat
 
    end subroutine global_set_nlon_nlat
+
+
+   function recv_offset(self, this, priority) result(offset)
+      class(global_area) :: self
+      integer(int32), intent(in) :: this !is a process number = rank+1
+      character(len=3), intent(in) :: priority
+      integer(int32) :: offset
+
+      if (priority=='lat') then
+         offset = sum(self%local_nlon(1:this-1)) + 1
+      
+      else if (priority == 'lon') then
+         offset = sum(self%local_nlat(1:this-1)) + 1
+      
+      else
+         call mpi_finalize()
+         print *, 'ERROR: invalid dividing priority'
+         stop
+      
+      end if
+
+   end function recv_offset
+
+   function recv_num(self, this) result(res)
+      class(global_area), intent(in) :: self
+      integer(int32), intent(in) :: this
+      integer(int32) :: res
+
+      res = self%local_nlon(this) * self%local_nlat(this)
+
+   end function recv_num
+
 
 end module mod_array_division

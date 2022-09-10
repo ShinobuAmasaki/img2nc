@@ -7,11 +7,11 @@ program main
    use img2nc
    implicit none
    
-   integer(int32) :: i, j
+   integer(int32) :: i, j, k
 
    ! MPI variables
-   integer(int32) :: petot, this_rank, this, ierr ! petot = 'processor element total'
-   type(mpi_datatype) :: t_integrate
+   integer(int32) :: petot, this_rank, this, ierr, itag ! petot = 'processor element total'
+   type(mpi_status) :: istatus
 
    character(len=256) :: filename, data_dir, range, outnc
    character(len=256), allocatable :: name_list(:,:)
@@ -19,14 +19,14 @@ program main
    type(Tile), allocatable :: array(:,:)
    type(Tile) :: single, final_tile
    type(Image) :: img
-   integer(int32) :: count, total, lat_size
+   integer(int32) :: count, local_total, lat_size
 
    type(global_area) :: global
    type(local_area) :: local
    type(boundary) :: edge
    character(len=3) :: priority='lon'
 
-   integer(int32) :: n_send
+   integer(int32) :: n_send, offset, n_recv
    integer(int16), allocatable, target :: data_array(:,:)
 
    integer(int32) :: coarse
@@ -36,6 +36,7 @@ program main
    call mpi_comm_size(mpi_comm_world, petot, ierr)
    call mpi_comm_rank(mpi_comm_world, this_rank, ierr)
    this = this_rank + 1
+   itag = 0
 
    coarse = 16 ! this is default setting for coarse grainning
 
@@ -72,7 +73,7 @@ program main
 !---------------------------------------------------------!
    !-- loading img files
    count = 0
-   total = local%nlon_img * local%nlat_img
+   local_total = local%nlon_img * local%nlat_img
 
    do j = local%lat_begin, local%lat_end
       do i = local%lon_begin, local%lon_end
@@ -85,7 +86,7 @@ program main
 
          array(i,j) = img%img2tile(coarse)
          count = count + 1
-         print '(a,i3,a,i3,a,i3)', 'loaded: ' // trim(name_list(i,j))// ', on Process No.', this, ': ', count, '/', total
+         print '(a,i3,a,i3,a,i3)', 'loaded: ' // trim(name_list(i,j))// ', on Process No.', this, ': ', count, '/', local_total
          call img%clear()
 
       end do 
@@ -132,7 +133,24 @@ program main
    ! size of sending data
    n_send = local%nlon*local%nlat
 
-   call mpi_gather(single%data(1,1), n_send, mpi_integer2, data_array(1,1), n_send, mpi_integer2, 0, mpi_comm_world, ierr)
+   if (this == 1) then
+      ! on proc with rank num 0, copy data into data_array
+      data_array(1:local%nlon, 1:local%nlat) = single%data(:,:)
+      
+      ! recv loop
+      do k = 2, petot
+         offset = global%recv_offset(k, priority=priority)
+         n_recv = global%recv_num(k)
+
+         ! recieve data from　proc with rank num from 1 to petot  
+         call mpi_recv(data_array(1,offset), n_recv, mpi_integer2, k-1, itag, mpi_comm_world, istatus, ierr)
+      end do
+
+   else
+      ! send data to rank 0 if var this is from 2 to petot
+      call mpi_send(single%data(1,1), n_send, mpi_integer2, 0, itag, mpi_comm_world, ierr)
+
+   end if
 
    ! deallocate data after gather completed.
    if (allocated(single%data)) then
