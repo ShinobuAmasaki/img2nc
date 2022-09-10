@@ -54,7 +54,33 @@
 
 
 ### e.g. Ubuntu 22.04 LTS
+Ubuntu 22.04 LTSでのインストール例を示す。
 
+``` bash
+$ sudo apt install gfortran openmpi-bin libnetcdff-dev
+
+$ locate mpi_f08
+/usr/lib/x86_64-linux-gnu/fortran/gfortran-mod-15/openmpi/mpi_f08.mod
+
+$ ldconfig -p | grep libnetcdff
+		libnetcdff.so.7 (libc6,x86-64) => /lib/x86_64-linux-gnu/libnetcdff.so.7
+        libnetcdff.so (libc6,x86-64) => /lib/x86_64-linux-gnu/libnetcdff.so
+```
+
+メモ： ライブラリのパスは"`/lib/x86_64-linux-gnu`"で、modファイルのディレクトリのパスは"`/usr/lib/x86_64-linux-gnu/fortran/gfortran-mod-15/openmpi`"である。
+
+
+```bash
+# FPMを入手してインストール
+$ wget https://github.com/fortran-lang/fpm/releases/download/v0.5.0/fpm-0.5.0-linux-x86_64
+$ chmod +x fpm-0.5.0-linux-x86_64
+# その後環境変数PATHに含まれるディレクトリにシンボリックリンクを貼る。
+
+# ビルド
+$ fpm build --compiler mpif90 \
+	 --flag "-I/usr/include -I/usr/lib/x86_64-linux-gnu/fortran/gfortran-mod-15/openmpi" \
+	 --link-flag "-L/lib/x86_64-linux-gnu"
+```
 
 ## 使い方
 例として、月の表面に位置するLambartクレーター (西経21度, 北緯26度)を描いてみる。
@@ -121,7 +147,7 @@ GMTの使い方については [GMT Documentation](https://docs.generic-mapping-
 ## Future works
 将来、以下の機能を実装する予定である。
 
-- 粗視化処理
+- ✅粗視化処理
 - ✅Intelコンパイラによるビルド
 - ✅並列処理
 - MOLA(火星のDEM)のデータ処理

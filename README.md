@@ -53,19 +53,24 @@ We have checked the operation on the following Linux OS:
 	$ fpm install --prefix <directory>
 	```
 
-Then, you can find the executable file on `img2nc/build/gfortran_XXX/img2nc` 
+Then, you can find the executable file on `<directory>/bin/img2nc` 
 
 ### e.g. on Ubuntu 22.04 LTS
 We will show you the installation procedure in Ubuntu 22.04 LTS as an example.
 
 ``` bash
-$ sudo apt install libnetcdff-dev gfortran
+$ sudo apt install gfortran openmpi-bin libnetcdff-dev
+
+$ locate mpi_f08
+/usr/lib/x86_64-linux-gnu/fortran/gfortran-mod-15/openmpi/mpi_f08.mod
+
 $ ldconfig -p | grep libnetcdff
 		libnetcdff.so.7 (libc6,x86-64) => /lib/x86_64-linux-gnu/libnetcdff.so.7
         libnetcdff.so (libc6,x86-64) => /lib/x86_64-linux-gnu/libnetcdff.so
 ```
 
-Memo: the library path is "`/lib/x86_64-linux-gnu`"
+Memo: the library path is "`/lib/x86_64-linux-gnu`" and the module directory path is "`/usr/lib/x86_64-linux-gnu/fortran/gfortran-mod-15/openmpi`".
+
 
 ```bash
 # Get fpm
@@ -74,7 +79,9 @@ $ chmod +x fpm-0.5.0-linux-x86_64
 # 	and make a symbolic link in a PATH dir.
 
 # Build
-$ fpm build --flag "-I/usr/include" --link-flag "-L/lib/x86_64-linux-gnu"
+$ fpm build --compiler mpif90 \
+	 --flag "-I/usr/include -I/usr/lib/x86_64-linux-gnu/fortran/gfortran-mod-15/openmpi" \
+	 --link-flag "-L/lib/x86_64-linux-gnu"
 ```
 
 ## Usage
@@ -140,7 +147,7 @@ See [GMT Documentation](https://docs.generic-mapping-tools.org/latest/) on how t
 ## Future works
 In the future, we would like to implement the following feature:
 
-- coarse graining
+- ✅coarse vision
 - ✅support Intel Fortran Compiler
 - ✅parallel processing
 - Support MOLA data (Mars DEM)
