@@ -154,7 +154,7 @@ GMTの使い方については [GMT Documentation](https://docs.generic-mapping-
 - ✅Intelコンパイラによるビルド
 - ✅並列処理
 - MOLA(火星のDEM)のデータ処理
-- 並列
+- 並列I/O
 
 [^1]: [Institute of Space and Astronautical Science, Japan Aerospace Exploration Agency - 宇宙航空研究開発機構　宇宙科学研究所](https://www.isas.jaxa.jp/)
 [^2]: [Generic Mapping Tools](https://www.generic-mapping-tools.org/)
