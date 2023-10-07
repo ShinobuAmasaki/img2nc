@@ -47,9 +47,9 @@ module Label_m
       character(LBL_BUFF_SIZE) :: buff = ''
    contains
       procedure :: get_value => get_value_LabelFile
-      procedure :: read_file => read_file_buffered_LabelFile
+      procedure :: load_file => load_file_buffered_LabelFile
       procedure :: init => init_LabelFile
-      procedure :: readbuff => read_main_values_from_buff
+      procedure :: read_buff => read_main_values_from_buff
    end type LabelFile
 
  
@@ -427,7 +427,7 @@ contains
    end function get_value_LabelFile
 
 
-   subroutine read_file_buffered_LabelFile(self, unit, ios)
+   subroutine load_file_buffered_LabelFile(self, unit, ios)
       implicit none
       class(LabelFile), intent(inout) :: self
       integer(int32), intent(in) :: unit
@@ -442,7 +442,7 @@ contains
       end if
 
 
-   end subroutine read_file_buffered_LabelFile
+   end subroutine load_file_buffered_LabelFile
     
 
 end module Label_m

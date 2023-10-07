@@ -8,9 +8,9 @@ program main
    type(LabelFile) :: filedata
 
    open (10, file='dat/lon000/DTM_MAP_01_N00E000S01E001SC.lbl', form='unformatted', action='read', access='stream')
-   call load_file_buffered(10, filedata%buff)
    call filedata%init()
-   call filedata%readbuff()
+   call filedata%load_file(10)
+   call filedata%read_buff()
 
 
    print *, trim(filedata%get_value(UPPER_LEFT_LATITUDE))
