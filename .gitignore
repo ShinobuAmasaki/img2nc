@@ -39,7 +39,6 @@
 *.nc
 
 # directories
-test/
 dat/
 
 # sabotage
