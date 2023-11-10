@@ -29,11 +29,18 @@ program main
    integer, parameter :: MAX_BUFF_SLOT = 64
 
    ! Input/Output
-   integer :: uni, ios
+   integer :: uni, ios, progress, howmany
 
    ! Magic parameters
    integer(int32), parameter :: nx = 4096
    integer(int32), parameter :: ny = 4096
+
+   integer(int32) :: global_nx
+   integer(int32) :: global_ny
+   integer(int32) :: local_nx
+   integer(int32) :: local_ny
+
+   real(real64) :: offset_x, offset_y
 
    type(buff), target :: buff_single
 
@@ -66,16 +73,40 @@ program main
    numlon = size(distri_2d, dim=1)
    numlat = size(distri_2d, dim=2)
 
-   allocate(buff_single%data(nx, ny))
+   uni = 100 + thisis
 
-   uni = 100
+   block
+      global_nx = nx*numlon/coarse
+      global_ny = ny*numlat/coarse
+      local_nx = nx/coarse
+      local_ny = ny/coarse
+   end block
+
+   block
+      step_lon = (dble(edge%get_east()) - dble(edge%get_west()))/dble(global_nx)
+      step_lat = (dble(edge%get_north()) - dble(edge%get_south()))/dble(global_ny)
+   end block
+
+   block
+      offset_x = +step_lon/2d0 
+      offset_y = -step_lat/2d0
+      ! offset_x = +step_lon*(0.5d0 - 1d0/(2d0*coarse)) 
+      ! offset_y = -step_lat*(0.5d0 - 1d0/(2d0*coarse))
+   end block
+
+   block
+      howmany = count(distri_logical)
+      progress = 1 
+   end block
 
    ! データの読み込み
-   do j = 1, numlon
-      do i = 1, numlat
+   do j = 1, numlat
+      do i = 1, numlon
          if (distri_logical(i,j)) then
 
-            allocate(tiles(i,j)%shrinked_data(nx, ny))
+            allocate(buff_single%data(nx, ny))
+
+            allocate(tiles(i,j)%shrinked_data(local_nx, local_ny))
             buff_single%data(:,:) = 0_int16
 
             filename = trim(adjustl(file_list(i,j)))//'.img'
@@ -83,32 +114,39 @@ program main
             call tiles(i,j)%set_path(filename)
 
             tiles(i,j)%p_data => buff_single
-            
+
             open(uni, file=tiles(i,j)%get_path(), access='stream', iostat=ios, status='old', form='unformatted')
-            read(uni) buff_single%data(:,:)
+            read(uni, iostat=ios) buff_single%data(:,:)
             close(uni)
+
+            
 
             call big_to_little(buff_single%data)
 
-            do q = 1, ny
-               tiles(i,j)%shrinked_data(:, q) = buff_single%data(:, ny-q+1)
+            if (coarse > 1) call buff_single%shrink(coarse)
+
+            do q = 1, local_ny
+               tiles(i,j)%shrinked_data(:, q) = buff_single%data(:, local_ny-q+1)
             end do
+
+            deallocate(buff_single%data)
+
+            nullify(tiles(i,j)%p_data)
+
+            print '(a, a, i5, a, i5, a)', trim(tiles(i, j)%get_path()), ': loaded. (', progress, '/', howmany, ')'
+            progress = progress + 1
 
          end if
       end do
    end do
 
-   block
-      step_lon = (dble(edge%get_east()) - dble(edge%get_west()))/dble(nx*numlon)
-      step_lat = (dble(edge%get_north()) - dble(edge%get_south()))/dble(ny*numlat)
-   end block
    
    ! Define the outputting netcdf file
    block
       call check( nf90_create_par(outnc, NF90_HDF5, mpi_comm_world%mpi_val, mpi_info_null%mpi_val, ncid))
       
-      call check( nf90_def_dim(ncid, 'longitude', nx*numlon, dim_id_lon))
-      call check( nf90_def_dim(ncid, 'latitude', ny*numlat, dim_id_lat))
+      call check( nf90_def_dim(ncid, 'longitude', global_nx, dim_id_lon))
+      call check( nf90_def_dim(ncid, 'latitude', global_ny, dim_id_lat))
       
       call check( nf90_def_var(ncid, 'longitude', NF90_DOUBLE, dim_id_lon, var_id_lon))
       call check( nf90_def_var(ncid, 'latitude', NF90_DOUBLE, dim_id_lat, var_id_lat))
@@ -127,18 +165,18 @@ program main
       integer :: i, j
       real(real64) :: south, west
       if (isIm1) then
-         allocate(lon(numlon*nx))
-         allocate(lat(numlat*ny))
+         allocate(lon(global_nx))
+         allocate(lat(global_ny))
 
          west = dble(edge%get_west())
          south = dble(edge%get_south())
 
-         do concurrent(i = 1:numlon*nx)
-            lon(i) = dble(i-1)*step_lon + west
+         do concurrent(i = 1:global_nx)
+            lon(i) = dble(i-1)*step_lon + west + offset_x
          end do
 
-         do concurrent(j = 1:numlat*ny)
-            lat(j) = dble(j)*step_lat + south 
+         do concurrent(j = 1:global_ny)
+            lat(j) = dble(j)*step_lat + south + offset_y
          end do
       end if
    end block
@@ -146,8 +184,8 @@ program main
    
    block
       if (isIm1) then
-         call check( nf90_put_var(ncid, var_id_lon, lon, start=[1], count=[numlon*nx]))
-         call check( nf90_put_var(ncid, var_id_lat, lat, start=[1], count=[numlat*ny]))
+         call check( nf90_put_var(ncid, var_id_lon, lon, start=[1], count=[global_nx]))
+         call check( nf90_put_var(ncid, var_id_lat, lat, start=[1], count=[global_ny]))
       end if
    end block
 
@@ -160,8 +198,8 @@ program main
             if (distri_logical(i,j)) then
 
 
-               start_nc(:) = [(i-1)*nx+1, (j-1)*ny+1]
-               count_nc(:) = [nx, ny]
+               start_nc(:) = [(i-1)*local_nx+1, (j-1)*local_ny+1]
+               count_nc(:) = [local_nx, local_ny]
 
                call check(nf90_put_var(ncid, var_id_elev, tiles(i,j)%shrinked_data, start=start_nc, count=count_nc))
 
