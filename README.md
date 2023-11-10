@@ -153,8 +153,9 @@ In the future, we would like to implement the following feature:
 - ✅Coarse vision
 - ✅Support Intel Fortran Compiler
 - ✅Parallel processing
-- Support MOLA data (Mars DEM)
 - Parallel I/O
+- Load balancing & High-degree of Parallelization
+- Support MOLA data (Mars DEM)
 
 [^1]: Digital Elevation Model（数値標高地図）
 [^2]: [Institute of Space and Astronautical Science, Japan Aerospace Exploration Agency - 宇宙航空研究開発機構　宇宙科学研究所](https://www.isas.jaxa.jp/)
