@@ -23,7 +23,7 @@ module Label_m
 
    ! LabelDataは、データ要素(key, value)である。
    ! LabelObjectは、LableDataの配列である。
-   ! LabelFileは、複数個のLabelObjectからなり、lblファイル全体のデータを収容する。
+   ! LabelFileは、複数個のLabelObjectからなり、1個のlblファイル全体のデータを収容する。
 
    type LabelData
       character(LBL_KEY_LENGTH) :: key
@@ -46,9 +46,9 @@ module Label_m
       type(LabelObject) :: quality_info
       character(LBL_BUFF_SIZE) :: buff = ''
    contains
+      procedure :: init => init_LabelFile
       procedure :: get_value => get_value_LabelFile
       procedure :: load_file => load_file_buffered_LabelFile
-      procedure :: init => init_LabelFile
       procedure :: read_buff => read_main_values_from_buff
    end type LabelFile
 

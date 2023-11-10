@@ -1,9 +1,12 @@
 module base_m
-   use :: iso_fortran_env
+   use :: iso_fortran_env, stderr=>error_unit, stdout=>output_unit
    implicit none
       
    character(1), parameter, private :: CR = achar(13), LF = achar(10)
    character(2), parameter, public  :: CRLF=CR//LF
+
+   integer, parameter :: MAX_PATH_LEN = 1024
+   integer, parameter :: MAX_NAME_LEN = 256
 
 contains
 
@@ -54,7 +57,7 @@ contains
       if (present(ios)) ios = ios_ 
 
       if (ios_ /= 0 ) then
-         write(error_unit, '(a)') iomsg
+         write(stderr, '(a)') iomsg
          return
       end if
 
@@ -71,15 +74,15 @@ contains
       end if
 
       if (.not. isOpened) then
-         write(error_unit, '(a)') "Error: File is not opened."
+         write(stderr, '(a)') "Error: File is not opened."
          return
       
       else if (.not. isUnformatted) then
-         write(error_unit, '(a)') "Error: File opened as 'FORMATTED'."
+         write(stderr, '(a)') "Error: File opened as 'FORMATTED'."
          return
       
       else if (.not. isStream) then
-         write(error_unit, '(a)') "Error: File is opened without the `access='stream'` specifier."
+         write(stderr, '(a)') "Error: File is opened without the `access='stream'` specifier."
          return
       
       end if
@@ -88,10 +91,18 @@ contains
       if (present(ios)) ios = ios_ 
 
       if (ios_ > 0 ) then
-         write(error_unit, '(a)') iomsg
+         write(stderr, '(a)') iomsg
          return
       end if
 
    end subroutine load_file_buffered
+
+
+   subroutine print_usage()
+      use version_m
+      implicit none
+      
+      write(stdout, *) 'img2nc v'//version()//', convert data of SLDEM2013 into NetCDF.'
+   end subroutine
 
 end module base_m
