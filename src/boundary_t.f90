@@ -220,7 +220,7 @@ contains
 
       east = self%east_lon
 
-      if (1 <= east .and. east <= 360) then
+      if (-179 <= east .and. east <= 180) then
          flag = .true.
 
       else
@@ -326,10 +326,9 @@ contains
       if (self%get_west() > 0) then
          call self%check(is_west_edge_between_0_and_359)
          call self%check(is_east_edge_between_1_and_360)
-      else 
+      else
          call self%check(is_west_edge_between_minus180_and_plus179)
          call self%check(is_east_edge_between_minus179_and_plus180)
-         print *, "minus range"
       end if
 
       call self%check(is_south_edge_between_m90_and_p89)
