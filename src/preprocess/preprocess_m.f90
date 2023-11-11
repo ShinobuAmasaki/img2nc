@@ -94,7 +94,12 @@ contains
          range = trim(adjustl( arg(index)%v ))
       else
          ! 指定されていない場合、値RANGEは最後の引数にあると仮定する。
-         range = trim(adjustl( arg(size(arg))%v ))
+         block
+            integer:: p ! the index of the last space 
+            p = scan(arg_whole, ' ', back=.true.)
+            range = trim(adjustl(arg_whole(p:len(arg_whole))))
+            print *, range
+         end block
       end if
 
 
