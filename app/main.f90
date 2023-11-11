@@ -104,7 +104,7 @@ program main
       do i = 1, numlon
          if (distri_logical(i,j)) then
 
-            allocate(buff_single%data(nx, ny))
+            allocate(buff_single%data(nx, ny), source=MINUS_9999_AFTER_SWAP16)
 
             allocate(tiles(i,j)%shrinked_data(local_nx, local_ny))
             buff_single%data(:,:) = 0_int16
@@ -113,15 +113,12 @@ program main
 
             call tiles(i,j)%set_path(filename)
 
-            tiles(i,j)%p_data => buff_single
+            call buff_single%read_data(uni, tiles(i,j)%get_path())
+            ! open(uni, file=tiles(i,j)%get_path(), access='stream', iostat=ios, status='old', form='unformatted')
+            ! read(uni, iostat=ios) buff_single%data(:,:)
+            ! close(uni)
 
-            open(uni, file=tiles(i,j)%get_path(), access='stream', iostat=ios, status='old', form='unformatted')
-            read(uni, iostat=ios) buff_single%data(:,:)
-            close(uni)
-
-            
-
-            call big_to_little(buff_single%data)
+            call buff_single%big_to_little()
 
             if (coarse > 1) call buff_single%shrink(coarse)
 
@@ -131,7 +128,6 @@ program main
 
             deallocate(buff_single%data)
 
-            nullify(tiles(i,j)%p_data)
 
             print '(a, a, i5, a, i5, a)', trim(tiles(i, j)%get_path()), ': loaded. (', progress, '/', howmany, ')'
             progress = progress + 1
@@ -269,33 +265,6 @@ contains
       end if
 
    end subroutine check
-
-   pure function swap16(value)
-      implicit none
-      integer(int16), intent(in) :: value
-      integer(int16) :: swap16
-
-      swap16 = ishft(value,8)
-
-      swap16 = ior(swap16, ishft(value, -8))
-
-   end function swap16
-
-
-   subroutine big_to_little(array)
-      implicit none
-      integer(int16), intent(inout) :: array(:,:)
-      integer(int32) :: siz_i, siz_j, i, j
-
-      siz_i = size(array, dim=1)
-      siz_j = size(array, dim=2)
-
-      do concurrent (j = 1:siz_j)
-         do concurrent (i = 1:siz_i)
-            array(i,j) = swap16(array(i,j))
-         end do
-      end do 
-   end subroutine big_to_little
       
 
 end program main
