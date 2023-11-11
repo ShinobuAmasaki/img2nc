@@ -4,14 +4,24 @@ module dataname_m
    
 contains
 
-   subroutine create_data_name(west, north, code)
-      integer(int32), intent(in) :: west, north
+   subroutine create_data_name(west_arg, north_arg, code)
+      implicit none
+      integer(int32), intent(in) :: west_arg, north_arg
+ 
+      integer(int32) :: west, north
       integer(int32) :: east, south
       character(len=*), intent(out) :: code
       character(len=11) :: prefix
       character(len=2) :: postfix
       character(len=4) :: e_west, e_east
       character(len=3) :: e_north, e_south
+
+      west = west_arg
+      north = north_arg
+
+      if (west < 0) then
+         west = west + 360
+      end if
 
       !e.g. DTM_MAP_01_N44E323N43E324SC.img
       if (west == 359) then

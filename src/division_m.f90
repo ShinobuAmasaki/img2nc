@@ -28,6 +28,8 @@ contains
 
 
    subroutine create_filelist(data_root, edge, list)
+      implicit none
+      
       character(len=*), intent(in) :: data_root
       type(boundary), intent(inout) :: edge
       character(len=MAX_PATH_LEN), intent(out) :: list(:,:)
@@ -47,7 +49,17 @@ contains
 
          do i = 1, siz_lon
             !西から東へ
+            
             e_west = edge%get_west() + i - 1
+
+            if (edge%get_west() < 0) then
+               e_west = e_west + 360
+            end if
+
+            if (e_west > 359 ) then
+               e_west = e_west - 360
+            end if
+            
 
             call create_data_name(e_west, e_north, code)
 
