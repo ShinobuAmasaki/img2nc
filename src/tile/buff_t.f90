@@ -99,7 +99,10 @@ contains
             write(stderr, *) trim(iomsg)
          end if
 
-      end if 
+      else
+         write(stderr, '(2a)') trim(file), "is not accessible."
+      end if
+
    end subroutine read_data_from_file
 
 

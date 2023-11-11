@@ -24,6 +24,8 @@ module boundary_t
       procedure, public, pass :: check_valid_range
       procedure, public, pass :: check => test_and_update_valid_flag
       procedure, public, pass :: is_west_edge_between_0_and_359
+      procedure, public, pass :: is_west_edge_between_minus180_and_plus179
+      procedure, public, pass :: is_east_edge_between_minus179_and_plus180
       procedure, public, pass :: is_east_edge_between_1_and_360
       procedure, public, pass :: is_south_edge_between_m90_and_p89
       procedure, public, pass :: is_north_edge_between_m89_and_p90
@@ -175,6 +177,24 @@ contains
 
    end function is_west_edge_between_0_and_359
 
+   function is_west_edge_between_minus180_and_plus179(self) result(flag)
+      class(boundary), intent(in) :: self
+      logical :: flag
+      integer(int32) :: west
+
+      west = self%west_lon
+
+      !valid range
+      if (-180 <= west .and. west <= 179) then
+         flag = .true.
+
+      !invalid range
+      else
+         flag = .false.
+      end if
+
+   end function is_west_edge_between_minus180_and_plus179
+
 
    function is_east_edge_between_1_and_360(self) result(flag)
       class(boundary), intent(in) :: self
@@ -192,6 +212,21 @@ contains
 
    end function is_east_edge_between_1_and_360
 
+
+   function is_east_edge_between_minus179_and_plus180(self) result(flag)
+      class(boundary), intent(in) :: self
+      logical :: flag
+      integer(int32) :: east
+
+      east = self%east_lon
+
+      if (1 <= east .and. east <= 360) then
+         flag = .true.
+
+      else
+         flag = .false.
+      end if
+   end function is_east_edge_between_minus179_and_plus180
 
    function is_south_edge_between_m90_and_p89(self) result(flag)
       class(boundary), intent(in) :: self
@@ -284,10 +319,19 @@ contains
 
 !-- call validation checks
    subroutine check_valid_range(self)
+      implicit none
+      
       class(boundary), intent(inout) :: self
 
-      call self%check(is_west_edge_between_0_and_359)
-      call self%check(is_east_edge_between_1_and_360)
+      if (self%get_west() > 0) then
+         call self%check(is_west_edge_between_0_and_359)
+         call self%check(is_east_edge_between_1_and_360)
+      else 
+         call self%check(is_west_edge_between_minus180_and_plus179)
+         call self%check(is_east_edge_between_minus179_and_plus180)
+         print *, "minus range"
+      end if
+
       call self%check(is_south_edge_between_m90_and_p89)
       call self%check(is_north_edge_between_m89_and_p90)
 

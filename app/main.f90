@@ -68,10 +68,11 @@ program main
    call set_distribution(distri_1d, distri_2d, distri_logical)
 
 !- データ読み込み
-   call allocate_tiles(tiles, distri_2d)
 
    numlon = size(distri_2d, dim=1)
    numlat = size(distri_2d, dim=2)
+
+   allocate(tiles(numlon, numlat))
 
    uni = 100 + thisis
 
@@ -113,10 +114,7 @@ program main
 
             call tiles(i,j)%set_path(filename)
 
-            call buff_single%read_data(uni, tiles(i,j)%get_path())
-            ! open(uni, file=tiles(i,j)%get_path(), access='stream', iostat=ios, status='old', form='unformatted')
-            ! read(uni, iostat=ios) buff_single%data(:,:)
-            ! close(uni)
+            call buff_single%read_data(uni, file=tiles(i,j)%get_path())
 
             call buff_single%big_to_little()
 
@@ -221,20 +219,6 @@ program main
    
 contains
 
-   subroutine allocate_tiles(tiles, distri_2d)
-      implicit none
-      type(Tile), allocatable, intent(inout) :: tiles(:,:)
-      integer(int32), intent(in) :: distri_2d(:,:)
-
-      integer(int32) :: numlon, numlat 
-
-      numlon = size(distri_2d, dim=1)
-      numlat = size(distri_2d, dim=2)
-
-      allocate(tiles(numlon, numlat))
-   end subroutine allocate_tiles
-
-
    subroutine default(data_dir, outnc, coarse, edge)
       implicit none
       character(*), intent(inout) :: data_dir, outnc
@@ -251,6 +235,7 @@ contains
       call edge%set_north(16)
 
    end subroutine default
+
 
    subroutine check(status)
       implicit none
