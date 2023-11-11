@@ -88,10 +88,10 @@ program main
    end block
 
    block
-      offset_x = +step_lon/2d0 
-      offset_y = -step_lat/2d0
-      ! offset_x = +step_lon*(0.5d0 - 1d0/(2d0*coarse)) 
-      ! offset_y = -step_lat*(0.5d0 - 1d0/(2d0*coarse))
+      if (coarse > 1) then
+         offset_x = +step_lon/2d0
+         offset_y = -step_lat/2d0
+      end if
    end block
 
    block
