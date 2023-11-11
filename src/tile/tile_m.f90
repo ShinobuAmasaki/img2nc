@@ -10,7 +10,6 @@ module Tile_m
       private
       character(MAX_PATH_LEN) :: path_to_img
       integer(int32), public :: west_lon, east_lon, south_lat, north_lat
-      type(buff),public, pointer :: p_data => null()
       integer(int16), public, allocatable :: shrinked_data(:, :) 
       type(LabelFile) :: lbl
    contains
@@ -39,22 +38,5 @@ contains
       res = self%path_to_img
    end function get_path
 
-
-   ! lblの読み込み、
-   subroutine preprocess(self)
-      
-      implicit none
-      class(Tile) :: self
-
-   end subroutine
-
-   subroutine shrink_process(self, coarse)
-      implicit none
-      class(Tile) :: self
-      integer(int32) :: coarse
-   end subroutine
-
-   subroutine postprocess()
-   end subroutine
 
 end module Tile_m

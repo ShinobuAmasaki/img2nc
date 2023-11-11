@@ -8,6 +8,8 @@ module base_m
    integer, parameter :: MAX_PATH_LEN = 1024
    integer, parameter :: MAX_NAME_LEN = 256
 
+   integer(int16), parameter :: MINUS_9999_AFTER_SWAP16 = -3624_int16
+
 contains
 
    subroutine head_single_line (buff, line)
@@ -104,5 +106,16 @@ contains
       
       write(stdout, *) 'img2nc v'//version()//', convert data of SLDEM2013 into NetCDF.'
    end subroutine
+
+   pure function swap16(value)
+      implicit none
+      integer(int16), intent(in) :: value
+      integer(int16) :: swap16
+
+      swap16 = ishft(value,8)
+
+      swap16 = ior(swap16, ishft(value, -8))
+
+   end function swap16
 
 end module base_m
