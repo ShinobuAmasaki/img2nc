@@ -153,8 +153,10 @@ In the future, we would like to implement the following feature:
 - ✅Coarse vision
 - ✅Support Intel Fortran Compiler
 - ✅Parallel processing
+- Asynchronous I/O
 - Parallel I/O
-- Load balancing & High-degree of Parallelization
+- High-degree of Parallelization
+- Negative Longitude
 - Support MOLA data (Mars DEM)
 
 [^1]: Digital Elevation Model（数値標高地図）
