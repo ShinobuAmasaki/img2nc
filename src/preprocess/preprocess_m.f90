@@ -98,7 +98,7 @@ contains
             integer:: p ! the index of the last space 
             p = scan(arg_whole, ' ', back=.true.)
             range = trim(adjustl(arg_whole(p:len(arg_whole))))
-            print *, range
+            ! print *, range
          end block
       end if
 
