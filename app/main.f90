@@ -75,12 +75,6 @@ program main
    numlon = size(distri_2d, dim=1)
    numlat = size(distri_2d, dim=2)
 
-   block
-      if (coarse > 1) then
-         offset_x = +step_lon/2d0
-         offset_y = -step_lat/2d0
-      end if
-   end block
 
    block
       ! n_jobs = count(distri_logical)
@@ -200,9 +194,15 @@ program main
    call mpi_barrier(mpi_comm_world, ierr)
 
 
-   lonlat_prepare: block
+   lonlat_prepare: block 
       integer :: i, j
       real(real64) :: south, west
+
+      if (coarse > 1) then
+         offset_x = +step_lon/2d0
+         offset_y = -step_lat/2d0
+      end if
+
       if (isIm1) then
          allocate(lon(global_nx))
          allocate(lat(global_ny))
