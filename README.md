@@ -4,6 +4,7 @@ Convert planetary DEM[^1] data into NetCDF
 
 For those who want to draw a topographic map of the Moon.
 
+![lambart](https://user-images.githubusercontent.com/100006043/174430799-5b3f654a-1a47-48d0-ac9e-32976f05390c.png)
 
 ## Abstract
 This software has the following roles to:
@@ -18,7 +19,7 @@ This project managed by [**Fortran Package Manager (FPM)**](https://github.com/f
 
 This software depends on:
 - GNU Fortran (gfortran) or Intel Fortran Compiler (ifort, ifx)
-- MPI Library (for parallel execution)
+- MPI Library (with ROMIO feature enabled.)
 - [**Unidata NetCDF Fortran Library**](https://www.unidata.ucar.edu/software/netcdf/).
 - wget (to download DEM data)
 
@@ -38,17 +39,17 @@ We have checked the operation on the following Linux OS:
 3. Download the tarball of this project.
 
    ```bash
-	$ wget https://github.com/ShinobuAmasaki/img2nc/archive/refs/tags/v2.0.0.tar.gz
-	$ tar xzf v2.0.0.tar.gz
-	$ cd img2nc-2.0.0
+	$ wget https://github.com/ShinobuAmasaki/img2nc/archive/refs/tags/v3.0.0.tar.gz
+	$ tar xzf v3.0.0.tar.gz
+	$ cd img2nc-3.0.0
 	```
 
 4. Build with `fpm`
 
 	```bash
 	$ fpm build --compiler mpif90 \
-			 --flag "-I/<mpi-include-path> -I/<netcdf-fortran-include>" \
-			 --link-flag "-L/<mpi-library-path> -L/<netcdf-fortran-lib-dir>"
+			 --flag "-I/<netcdf-fortran-include>" \
+			 --link-flag "-L/<netcdf-fortran-lib-dir>"
 	```
 
 5. Install into any directory
@@ -94,7 +95,7 @@ As an example, let's draw  Lambert crater at 21 deg. west longitude and 26 deg. 
 ### Downloading DEM
 First, determine the drawing range and download the DEM data. Specify the latitudes and longitudes of the coordinates as command line arguments when executing the shell script: `west/east/south/north`. 
 
-The longitude is specified in the range of 0 to 360 with the eastern direction as the positive with respect to the center of the Moon. The Latitude is specified in the range of -90 to 90 with the north direction as positive and the south direction as negative based on the Moon equator[^3].
+The longitude is specified in the range of 0 to 360 with the eastern direction as the positive, or the range of -180 to 180 with the eastern direction as the positive and the western direction as negative with respect to the center of the Moon. The Latitude is specified in the range of -90 to 90 with the north direction as positive and the south direction as negative based on the Moon equator[^3].
 
 Here, execute the shell script `dl_sldem2013` with following command and arguments.
 
@@ -120,7 +121,7 @@ After the execution, we will get the NetCDF file `out.nc`.
 Execute `img2nc` with `mpiexec`.
 
 ```
-$ mpiexec -n 3 img2nc -d ./dat -o out.nc -r 339/341/24/27
+$ mpiexec -n 9 img2nc -d ./dat -o out.nc -r 339/341/24/27
 ```
 
 Specify the number of processor elements with `-n` or `-np` option which must be less than or equal to the longitude width.
@@ -142,10 +143,10 @@ gmt begin lambart png
 gmt end
 ```
 
-Executing this shell script, following figure `lambert.png` is outputted.
+Executing this shell script, the beginning figure `lambert.png` is outputted.
 See [GMT Documentation](https://docs.generic-mapping-tools.org/latest/) on how to use GMT.
 
-![lambart](https://user-images.githubusercontent.com/100006043/174430799-5b3f654a-1a47-48d0-ac9e-32976f05390c.png)
+
 
 ## Future works
 In the future, we would like to implement the following feature:
@@ -153,10 +154,10 @@ In the future, we would like to implement the following feature:
 - ✅Coarse vision
 - ✅Support Intel Fortran Compiler
 - ✅Parallel processing
+- ✅Parallel I/O (MPI I/O based)
+- ✅High-degree of Parallelization
+- ✅Negative Longitude
 - Asynchronous I/O
-- Parallel I/O
-- High-degree of Parallelization
-- Negative Longitude
 - Support MOLA data (Mars DEM)
 
 [^1]: Digital Elevation Model（数値標高地図）

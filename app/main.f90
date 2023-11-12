@@ -3,18 +3,18 @@ program main
    use mpi_f08
    use netcdf
    use img2nc
-   use global_m
-   use buff_t
-   use Tile_m
    implicit none
    
    integer(int32) :: ierr, itag
-   integer(int32) :: i, j, p, q, r
+   integer(int32) :: i, j, k, p, q, r
    type(mpi_status) :: istatus
 
    integer(int32), allocatable :: distri_1d(:), distri_2d(:,:)
    logical, allocatable :: distri_logical(:, :)
+
    character(len=MAX_PATH_LEN), allocatable :: file_list(:,:)
+   character(len=MAX_PATH_LEN), allocatable :: file_list_local(:)
+   integer(int32) :: n_jobs, n_jobs_total
 
    character(len=MAX_PATH_LEN) :: filename, data_dir
    character(len=MAX_NAME_LEN) :: outnc
@@ -26,25 +26,27 @@ program main
    real(real64) :: step_lon, step_lat
    real(real64), allocatable :: lon(:), lat(:)
 
-   integer, parameter :: MAX_BUFF_SLOT = 64
-
    ! Input/Output
-   integer :: uni, ios, progress, howmany
+   integer :: uni, ios, howmany
 
    ! Magic parameters
-   integer(int32), parameter :: nx = 4096
-   integer(int32), parameter :: ny = 4096
+   integer(int32) :: nx
+   integer(int32) :: ny
 
    integer(int32) :: global_nx
    integer(int32) :: global_ny
    integer(int32) :: local_nx
    integer(int32) :: local_ny
 
+   character(:), allocatable :: cache
+
    real(real64) :: offset_x, offset_y
 
-   type(buff), target :: buff_single
+   type(buff), target :: buff_single, buff_double(2)
 
-   type(tile), allocatable :: tiles(:, :)
+   type(tile), allocatable :: tiles(:)
+   type(LabelFile), allocatable :: lbls(:)
+   logical, allocatable :: finish_flag(:)
 
    ! for netcdf
    integer(int32) :: ncid
@@ -56,37 +58,22 @@ program main
    call mpi_initialize(ierr)
 
 !---------------------------------------------------------------------!
-!- コマンドライン引数のバリデーション
+   ! Validate command line arguments. 
    call default(data_dir, outnc, coarse, edge)
-   call preprocess(data_dir, outnc, range, coarse, edge)
 
-!- 入力処理用の名簿を作成する。
+   ! Read parameter from command line arguments. 
+   call preprocess(data_dir, outnc, range, coarse, edge)
+   
+
+   ! 入力処理用の名簿を作成する。
    call allocate_lists(edge, file_list, distri_1d, distri_2d, distri_logical)
    call create_filelist(data_dir, edge, file_list)
 
-!- データ分散を司るリストを作成する。
+   ! データ分散を司るリストを作成する。
    call set_distribution(distri_1d, distri_2d, distri_logical)
-
-!- データ読み込み
 
    numlon = size(distri_2d, dim=1)
    numlat = size(distri_2d, dim=2)
-
-   allocate(tiles(numlon, numlat))
-
-   uni = 100 + thisis
-
-   block
-      global_nx = nx*numlon/coarse
-      global_ny = ny*numlat/coarse
-      local_nx = nx/coarse
-      local_ny = ny/coarse
-   end block
-
-   block
-      step_lon = (dble(edge%get_east()) - dble(edge%get_west()))/dble(global_nx)
-      step_lat = (dble(edge%get_north()) - dble(edge%get_south()))/dble(global_ny)
-   end block
 
    block
       if (coarse > 1) then
@@ -96,47 +83,105 @@ program main
    end block
 
    block
-      howmany = count(distri_logical)
-      progress = 1 
+      ! n_jobs = count(distri_logical)
+      n_jobs_total = numlat*numlon
+      n_jobs = int(n_jobs_total/petot)
+      if (thisis <= mod(n_jobs_total, petot)) n_jobs = n_jobs + 1
+
+      allocate(file_list_local(n_jobs)) 
    end block
 
-   ! データの読み込み
+   k = 1
    do j = 1, numlat
       do i = 1, numlon
          if (distri_logical(i,j)) then
-
-            allocate(buff_single%data(nx, ny), source=MINUS_9999_AFTER_SWAP16)
-
-            allocate(tiles(i,j)%shrinked_data(local_nx, local_ny))
-            buff_single%data(:,:) = 0_int16
-
-            filename = trim(adjustl(file_list(i,j)))//'.img'
-
-            call tiles(i,j)%set_path(filename)
-
-            call buff_single%read_data(uni, file=tiles(i,j)%get_path())
-
-            call buff_single%big_to_little()
-
-            if (coarse > 1) call buff_single%shrink(coarse)
-
-            do q = 1, local_ny
-               tiles(i,j)%shrinked_data(:, q) = buff_single%data(:, local_ny-q+1)
-            end do
-
-            deallocate(buff_single%data)
-
-
-            print '(a, a, i5, a, i5, a)', trim(tiles(i, j)%get_path()), ': loaded. (', progress, '/', howmany, ')'
-            progress = progress + 1
-
-         end if
+            file_list_local(k) = adjustl(file_list(i,j))
+            k = k + 1
+         end if 
       end do
    end do
 
-   
+
+   allocate(tiles(n_jobs))
+   allocate(lbls(n_jobs))
+
+
+   read_lbls: block 
+      integer(int32) :: uni = 100
+      do k = 1, n_jobs
+         
+         filename = trim(adjustl(file_list_local(k)))//'.lbl'
+
+         call lbls(k)%init()
+
+         open(uni, file=filename, form='unformatted', access='stream', status='old' )
+         call lbls(k)%load_file(uni, ios=ios)
+         call lbls(k)%read_buff()
+         close(uni)
+
+      end do
+   end block read_lbls 
+
+   do concurrent (k = 1:n_jobs)
+
+      cache = trim(lbls(k)%get_value(LINE_SAMPLES))
+      read(cache, *) nx
+      cache = trim(lbls(k)%get_value(LINES))
+      read(cache, *) ny
+
+      if (k == 1) then
+         local_nx = nx
+         local_ny = ny
+      else
+         if (local_nx /= nx) write(stderr, '(a)') 'ERROR: Non-uniform LINE_SAMPLES value found.'
+         if (local_ny /= ny) write(stderr, '(a)') 'ERROR: Non-uniform LINES value found.'
+      end if
+   end do
+
+   ! 粗視化の
+   set_step_nums: block
+      local_nx = nx/coarse
+      local_ny = ny/coarse
+
+      global_nx = nx*numlon/coarse
+      global_ny = ny*numlat/coarse
+
+      step_lon = (dble(edge%get_east()) - dble(edge%get_west()))/dble(global_nx)
+      step_lat = (dble(edge%get_north()) - dble(edge%get_south()))/dble(global_ny)
+   end block set_step_nums
+
+  
+   sync_io: block
+      integer(int32) :: uni = 100 
+      do k = 1, n_jobs
+
+         allocate(buff_single%data(nx, ny), source=MINUS_9999_AFTER_SWAP16)
+         allocate(tiles(k)%shrinked_data(local_nx, local_ny))
+
+         filename = trim(adjustl(file_list_local(k)))//'.img'
+         
+         call tiles(k)%set_path(filename)
+
+         call buff_single%read_data(uni, file=tiles(k)%get_path())
+
+         call buff_single%big_to_little()
+
+         if (coarse > 1) call buff_single%shrink(coarse)
+
+         do concurrent(q = 1:local_ny)
+            tiles(k)%shrinked_data(:,q) = buff_single%data(:, local_ny-q+1)
+         end do
+
+         deallocate(buff_single%data)
+
+         print '(a, a, i5, a, i5, a)', trim(tiles(k)%get_path()), ': loaded. (', k, '/', n_jobs, ')'
+
+      end do
+   end block sync_io
+
+
    ! Define the outputting netcdf file
-   block
+   init_nc: block
       call check( nf90_create_par(outnc, NF90_HDF5, mpi_comm_world%mpi_val, mpi_info_null%mpi_val, ncid))
       
       call check( nf90_def_dim(ncid, 'longitude', global_nx, dim_id_lon))
@@ -151,11 +196,11 @@ program main
       call check( nf90_put_att(ncid, var_id_elev, 'units', 'meters'))
 
       call check( nf90_enddef(ncid))
-   end block
+   end block init_nc
    call mpi_barrier(mpi_comm_world, ierr)
 
 
-   block
+   lonlat_prepare: block
       integer :: i, j
       real(real64) :: south, west
       if (isIm1) then
@@ -173,19 +218,21 @@ program main
             lat(j) = dble(j)*step_lat + south + offset_y
          end do
       end if
-   end block
-   call mpi_barrier(mpi_comm_world, ierr)
-   
-   block
+   end block lonlat_prepare
+
+  
+   lonlat_putvar: block
       if (isIm1) then
          call check( nf90_put_var(ncid, var_id_lon, lon, start=[1], count=[global_nx]))
          call check( nf90_put_var(ncid, var_id_lat, lat, start=[1], count=[global_ny]))
       end if
-   end block
+   end block lonlat_putvar
 
-   block
-      integer :: i, j, n 
+
+   parallel_io: block
+      integer ::  n 
       integer :: start_nc(2), count_nc(2)
+      k = 1
       do j = 1, numlat
          do i = 1, numlon
 
@@ -195,8 +242,8 @@ program main
                start_nc(:) = [(i-1)*local_nx+1, (j-1)*local_ny+1]
                count_nc(:) = [local_nx, local_ny]
 
-               call check(nf90_put_var(ncid, var_id_elev, tiles(i,j)%shrinked_data, start=start_nc, count=count_nc))
-
+               call check(nf90_put_var(ncid, var_id_elev, tiles(k)%shrinked_data, start=start_nc, count=count_nc))
+               k = k + 1
             end if
          end do
       end do
@@ -209,13 +256,16 @@ program main
 
       print *, "image: ", thisis, " complete."
       call mpi_barrier(mpi_comm_world, ierr)
-   end block
+   
+   end block parallel_io
 
+
+   ! NetCDF Finalize
    call check (nf90_close(ncid))
 
 !---------------------------------------------------------------------!
 !---------------------------------------------------------------------!
-   call mpi_finalize(ierr)
+   call mpi_finalize()
    
 contains
 
@@ -227,12 +277,12 @@ contains
 
       coarse = 16
       outnc = './out.nc'
-      data_dir = './dat'
+      data_dir = './sldem2013'
 
-      call edge%set_east(16)
-      call edge%set_west(0)
-      call edge%set_south(0)
-      call edge%set_north(16)
+      call edge%set_east(4)
+      call edge%set_west(-4)
+      call edge%set_south(-4)
+      call edge%set_north(4)
 
    end subroutine default
 

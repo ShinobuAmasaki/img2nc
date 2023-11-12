@@ -4,6 +4,7 @@
 
 月の地形図を描きたい人のために作成された。
 
+![lambart](https://user-images.githubusercontent.com/100006043/174430799-5b3f654a-1a47-48d0-ac9e-32976f05390c.png)
 
 ## 概要
 このソフトウェアは次の機能を持つ：
@@ -91,7 +92,7 @@ $ fpm build --compiler mpif90 \
 ### DEMデータをダウンロード
 まず初めに、描画およびダウンロードする領域を定める。この領域の範囲を経度と緯度で表現し、コマンドライン引数`west/east/south/north`として実行時に指定する。
 
-経度は月の中心を原点として、東向きを正にとり、0から360の範囲で指定する。
+経度は月の中心を原点として、東向きを正にとり、0から360の範囲で指定する。もしくは東向きを正、西向きを負にとり、-180から180の範囲で指定してもよい。
 緯度は赤道を基準に、北向きを正・南向きを負にとり、-90から90の範囲で指定する。
 
 シェルスクリプト`dl_sldem2013.sh`を以下のように引数を与えて実行し、データをダウンロードする。
@@ -119,10 +120,10 @@ $ img2nc -d dat -o out.nc -r 338/341/24/27
 `mpiexec`コマンドを使えば、指定したプロセス数で`img2nc`を実行できる。
 
 ```
-$ mpiexec -n 3 img2nc -d dat -o out.nc -r 338/341/24/27
+$ mpiexec -n 9 img2nc -d dat -o out.nc -r 338/341/24/27
 ```
 
-プロセス数を`-n`または`-np`オプションで指定する。ただしプロセス数は経度の幅の数値よりも小さくすること。
+プロセス数を`-n`または`-np`オプションで指定する。ただしプロセス数は読み込むファイルの数（SLDEM2013では経度と緯度のそれぞれの幅の積）よりも小さくすること。
 
 
 ### 描画
@@ -141,20 +142,22 @@ gmt begin lambart png
 gmt end
 ```
 
-このシェルスクリプトを実行すると、以下の画像ファイル(`lambert.png`)が出力される。
+このシェルスクリプトを実行すると、冒頭の画像ファイル(`lambert.png`)が出力される。
 GMTの使い方については [GMT Documentation](https://docs.generic-mapping-tools.org/latest/) を参照のこと。
-
-![lambart](https://user-images.githubusercontent.com/100006043/174430799-5b3f654a-1a47-48d0-ac9e-32976f05390c.png)
 
 
 ## Future works
 将来、以下の機能を実装する予定である。
 
-- ✅粗視化処理
-- ✅Intelコンパイラによるビルド
-- ✅並列処理
+- ✅粗視化処理（バージョン2）
+- ✅Intelコンパイラによるビルド（バージョン2）
+- ✅並列処理（バージョン2）
+- ✅出力の並列化（バージョン3）
+- ✅入力のより多い並列化（バージョン3）
+- ✅負の経度指定（バージョン3）
+- 非同期入出力（FortranのAsynchronous I/O）
 - MOLA(火星のDEM)のデータ処理
-- 並列I/O
+
 
 [^1]: [Institute of Space and Astronautical Science, Japan Aerospace Exploration Agency - 宇宙航空研究開発機構　宇宙科学研究所](https://www.isas.jaxa.jp/)
 [^2]: [Generic Mapping Tools](https://www.generic-mapping-tools.org/)
