@@ -14,3 +14,7 @@ link = ["m", "netcdff"] # DON'T change the order for ifort
 
 [install]
 library = false
+
+[[executable]]
+name = 'img2nc-mola'
+main = 'main-mola.f90'
