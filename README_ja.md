@@ -43,12 +43,25 @@
    ```
 
 4. `fpm`でビルドする。
+   `--compiler`フラグで`mpif90`を指定する。
+   このとき、`--flag`にヘッダーファイルのあるディレクトリと`--link-flag`にライブラリファイルのあるディレクトリを指定する必要があるかもしれない。
 
    ```bash
    $ fpm build --compiler mpif90 \
-         --flag "-I/<mpi-include-path> -I/<netcdf-fortran-include-path>" \
-         --link-flag "-L/<mpi-library-path> -L/<netcdf-fortran-library-path>"
+         --flag "-I/<netcdf-fortran-include-path>" \
+         --link-flag "-L/<netcdf-fortran-library-path>"
    ```
+   
+   もしくは環境変数FPM_FCとFPM_FFLAGSとFPM_LDFLAGSに適当な値を書き込み、その後に`fpm build`を実行する。
+   
+   ```bash
+   $ export FPM_FC=mpif90
+   $ export FPM_FFLAGS="-I/<netcdf-fortran-include-path>"
+   $ export FPM_LDFLAG="-L/<netcdf-fortran-library-path>"
+
+   $ fpm build 
+   ```
+
 
 5. 任意のディレクトリへインストール
 
