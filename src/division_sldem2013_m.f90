@@ -1,12 +1,25 @@
-module division_m
+module division_sldem2013_m
    use, intrinsic :: iso_fortran_env, stderr=>error_unit
    use :: base_m
    use :: boundary_t
    use :: dataname_m
 
+   interface allocate_lists
+      module procedure :: allocate_lists_sldem2013
+   end interface 
+
+   interface create_filelist
+      module procedure :: create_filelist_sldem2013
+   end interface
+
+   interface set_distribution
+      module procedure :: set_distribution_sldem2013
+   end interface
+
+
 contains
 
-   subroutine allocate_lists(edge, list, numlist_1d, numlist_2d, logical_array)
+   subroutine allocate_lists_sldem2013(edge, list, numlist_1d, numlist_2d, logical_array)
       use global_m
       implicit none
       
@@ -24,10 +37,10 @@ contains
       allocate(numlist_1d(lon_size*lat_size))
       allocate(logical_array(lon_size, lat_size))
 
-   end subroutine allocate_lists
+   end subroutine allocate_lists_sldem2013
 
 
-   subroutine create_filelist(data_root, edge, list)
+   subroutine create_filelist_sldem2013(data_root, edge, list)
       implicit none
       
       character(len=*), intent(in) :: data_root
@@ -69,10 +82,10 @@ contains
 
          end do
       end do
-   end subroutine create_filelist
+   end subroutine create_filelist_sldem2013
 
 
-   subroutine set_distribution (distri_1d, distri_2d, distri_logical)
+   subroutine set_distribution_sldem2013 (distri_1d, distri_2d, distri_logical)
       use global_m
       implicit none
       integer(int32), intent(inout) :: distri_1d(:), distri_2d(:, :)
@@ -109,6 +122,6 @@ contains
          end do
       end do
 
-   end subroutine set_distribution
+   end subroutine set_distribution_sldem2013
 
-end module division_m
+end module division_sldem2013_m
