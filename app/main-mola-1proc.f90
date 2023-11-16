@@ -2,6 +2,7 @@ program main
    use, intrinsic :: iso_fortran_env
    use netcdf
    use img2nc
+   use mola_megdr
    implicit none
    
 
@@ -29,8 +30,8 @@ program main
    filestem = 'megr44n180hb'
    outnc = 'mola.nc'
 
-   call edge%set_east(270)
    call edge%set_west(180)
+   call edge%set_east(270)
    call edge%set_south(0)
    call edge%set_north(44)
 
