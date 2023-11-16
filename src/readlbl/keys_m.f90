@@ -36,6 +36,16 @@ module keys_m
    character(21), parameter, public :: LOWER_RIGHT_LONGITUDE  = 'LOWER_RIGHT_LONGITUDE'
    character(21), parameter, public :: IMAGE_CENTER_LATITUDE  = 'IMAGE_CENTER_LATITUDE'
    character(22), parameter, public :: IMAGE_CENTER_LONGITUDE = 'IMAGE_CENTER_LONGITUDE'
+   ! Followings are defined in MOLA's lbl file:
+   character(11), parameter, public :: FILE_RECORDS           = 'FILE_RECORDS'   
+   character(12), parameter, public :: RECORD_BYTES           = 'RECORD_BYTES'   
+   character(15), parameter, public :: SPACECRAFT_NAME        = 'SPACECRAFT_NAME'
+   character(18), parameter, public :: START_ORBIT_NUMBER     = 'START_ORBIT_NUMBER'
+   character(17), parameter, public :: STOP_ORBIT_NUMBER      = 'STOP_ORBIT_NUMBER'
+   character(18), parameter, public :: PRODUCER_FULL_NAME     = 'PRODUCER_FULL_NAME'
+   character(25), parameter, public :: PRODUCER_INSTITUTION_NAME = 'PRODUCER_INSTITUTION_NAME'
+   character(11), parameter, public :: DESCRIPTION            = 'DESCRIPTION'
+
 
    ! OBJECT = IMAGE_MAP_PROJECTION
    character(24), parameter, public :: HAT_DATA_SET_MAP_PROJECTION   = '^DATA_SET_MAP_PROJECTION' 
@@ -95,6 +105,7 @@ module keys_m
    character( 5), parameter, public :: STDEV               = 'STDEV'
    character(10), parameter, public :: MODE_PIXEL          = 'MODE_PIXEL'
    character( 4), parameter, public :: UNIT                = 'UNIT'
+   character( 4), parameter, public :: NAME                = 'NAME'
 
    ! OBJECT = QUALITY_INFO
    character(21), parameter, public :: QA_PERCENT_GOOD_PIXEL           = 'QA_PERCENT_GOOD_PIXEL'

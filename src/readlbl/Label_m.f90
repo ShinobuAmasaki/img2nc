@@ -8,14 +8,16 @@ module Label_m
 
    integer(int32), parameter, public :: LBL_KEY_LENGTH = 256
    integer(int32), parameter, public :: LBL_VALUE_LENGTH = 2048
-   integer(int32), parameter, public :: LBL_BUFF_SIZE = 4096
+   integer(int32), parameter, public :: LBL_BUFF_SIZE = 8192
    character(4), parameter, public :: LBL_NULL_STRING = 'NULL'
    character(3), parameter, public :: LBL_END_STATEMENT = 'END'
+   character(1), parameter, public :: LBL_EQ_SIGN = '='
+   character(1), parameter, public :: LBL_QUOTATION = '"'
 
-   integer(int32), parameter :: LBL_MAIN_SIZE = 34
+   integer(int32), parameter :: LBL_MAIN_SIZE = 42
    integer(int32), parameter :: LBL_PROJECTION_SIZE = 28
    integer(int32), parameter :: LBL_PROCPARA_SIZE = 5
-   integer(int32), parameter :: LBL_IMAGE_SIZE = 21
+   integer(int32), parameter :: LBL_IMAGE_SIZE = 23
    integer(int32), parameter :: LBL_QUALITYINFO_SIZE = 7
    
 
@@ -54,6 +56,74 @@ module Label_m
 
  
 contains
+
+   subroutine parse(buff, line, key_cache, val_cache)
+      implicit none
+      character(*), intent(inout) :: buff
+      character(*), intent(inout) :: line
+      character(LBL_KEY_LENGTH), intent(out) :: key_cache
+      character(LBL_VALUE_LENGTH), intent(out) :: val_cache
+
+      integer(int32) :: eqsi     ! eq sign index 
+      integer(int32) :: qif, qib ! quotation mark's index forward/backward 
+      logical :: multiple_quote_marks, isContinue
+
+      eqsi = scan(line, LBL_EQ_SIGN)
+      qif = scan(line, LBL_QUOTATION)
+      qib = scan(line, LBL_QUOTATION, back=.true.)
+
+      ! lineに引用符は2個以上含まれるか?
+      if (qif /= 0) then
+         multiple_quote_marks = .not. qif == qib
+      else
+         multiple_quote_marks = .false.
+      endif
+   
+      ! lineに等号が含まれる場合
+      if (eqsi /= 0) then
+         
+         key_cache = trim(adjustl(line(1:eqsi-1)))
+            
+         ! 引用符が含まれないもしくは2つ以上含まれる場合、行末尾までをkey-valueとする。
+         if (multiple_quote_marks .or. qif == 0) then
+            
+            val_cache = trim(adjustl(line(eqsi+1:len_trim(line))))
+            
+         ! 引用符が1つだけ含まれる場合、次の行を読み込み引用符を探す。
+         else
+            val_cache = trim(adjustl(line(qif+1:)))
+            isContinue = .true.
+
+            do while (isContinue)
+
+               ! 1行をlineに読み込む。
+               call head_single_line(buff, line)
+
+               ! 引用符を探す。
+               qif = scan(line, LBL_QUOTATION)
+
+               ! 引用符が含まれない場合、継続する。ただし行が空の場合は継続しない。
+               isContinue = qif == 0 .and. len_trim(line) /= 0
+
+               ! 次の行を読み込む場合は、行全体をval_cacheに追記する。
+               if (isContinue) then
+                  val_cache = trim(val_cache)//CRLF//trim(adjustl(line(:)))
+               else
+                  val_cache = trim(val_cache)//CRLF//trim(adjustl(line(:qif-1)))
+               end if
+
+            end do
+         end if
+
+      else
+         ! 等号が含まれない場合、何もしない。
+         return
+      end if
+
+      if (qif == 0 .and. qib == 0) return
+
+   end subroutine parse
+
 
    subroutine init_LabelFile(self)
       implicit none
@@ -113,6 +183,15 @@ contains
       self%main%data(32)%key = LOWER_RIGHT_LONGITUDE
       self%main%data(33)%key = IMAGE_CENTER_LATITUDE
       self%main%data(34)%key = IMAGE_CENTER_LONGITUDE
+
+      self%main%data(35)%key = FILE_RECORDS
+      self%main%data(36)%key = RECORD_BYTES
+      self%main%data(37)%key = SPACECRAFT_NAME
+      self%main%data(38)%key = START_ORBIT_NUMBER
+      self%main%data(39)%key = STOP_ORBIT_NUMBER
+      self%main%data(40)%key = PRODUCER_FULL_NAME
+      self%main%data(41)%key = PRODUCER_INSTITUTION_NAME
+      self%main%data(42)%key = DESCRIPTION
 
    end subroutine init_main_LabelFile
 
@@ -212,6 +291,8 @@ contains
       self%image%data(19)%key = STDEV
       self%image%data(20)%key = MODE_PIXEL
       self%image%data(21)%key = UNIT
+      self%image%data(22)%key = NAME
+      self%image%data(23)%key = DESCRIPTION
 
    end subroutine init_image_LabelFile
 
@@ -247,6 +328,9 @@ contains
 
       character(LBL_KEY_LENGTH+LBL_VALUE_LENGTH) :: line
       logical :: isContinue
+
+      character(LBL_KEY_LENGTH) :: key_cache
+      character(LBL_VALUE_LENGTH) :: val_cache
       
       isContinue = .true.
 
@@ -254,23 +338,28 @@ contains
 
          call head_single_line(self%buff, line)
 
-         select case (trim(adjustl(line)))
-         case ('OBJECT = IMAGE_MAP_PROJECTION')
-            call read_subobject_values_from_buff(self%projection, self%buff, 'END_OBJECT = IMAGE_MAP_PROJECTION')
+         call parse(self%buff, line, key_cache, val_cache)
 
-         case ('OBJECT = PROCESSING_PARAMETERS')
-            call read_subobject_values_from_buff(self%process_para, self%buff, 'END_OBJECT = PROCESSING_PARAMETERS')
+         if (trim(line) == '' .or. trim(line) == CRLF) cycle
 
-         case ('OBJECT = IMAGE')
-            call read_subobject_values_from_buff(self%image, self%buff, 'END_OBJECT = IMAGE')
 
-         case ('OBJECT = QUALITY_INFO')
-            call read_subobject_values_from_buff(self%quality_info, self%buff, 'END_OBJECT = QUALITY_INFO')
-
-         case default
-            call self%main%read_line(line)
+         if (trim(adjustl(key_cache)) == 'OBJECT') then
+            select case (trim(adjustl(val_cache)))
+            case ("IMAGE_MAP_PROJECTION")
+               call read_subobject_values_from_buff(self%projection, self%buff, "IMAGE_MAP_PROJECTION")
             
-         end select
+            case ("PROCESSING_PARAMETERS")
+               call read_subobject_values_from_buff(self%process_para, self%buff, 'PROCESSING_PARAMETERS')
+
+            case ("IMAGE")
+               call read_subobject_values_from_buff(self%image, self%buff, endstring='IMAGE')
+
+            case ("QUALITY_INFO")
+               call read_subobject_values_from_buff(self%quality_info, self%buff, 'QUALITY_INFO')
+            end select
+         else
+            call self%main%set_value(key_cache, val_cache)
+         end if
 
          isContinue = scan(self%buff, CRLF) /= 0 
          
@@ -289,6 +378,9 @@ contains
 
       character(LBL_KEY_LENGTH+LBL_VALUE_LENGTH) :: line
       logical :: isContinue
+
+      character(LBL_KEY_LENGTH) :: key
+      character(LBL_VALUE_LENGTH) :: val
       
       isContinue = .true.
 
@@ -296,13 +388,18 @@ contains
 
          call head_single_line(buff, line)
 
-         if (trim(adjustl(line)) == endstring) then
-            return 
-         end if
+         call parse(buff, line, key, val)
 
-         call self%read_line(line)
+         if (trim(adjustl(key)) == 'END_OBJECT' .and. &
+             trim(adjustl(val)) == trim(adjustl(endstring))) exit
+
+         ! print *, trim(adjustl(key)),'=', trim(adjustl(val)), trim(adjustl(endstring))
+
+         call self%set_value(key, val)
 
       end do
+
+      return
 
    end subroutine read_subobject_values_from_buff
    
@@ -374,6 +471,7 @@ contains
 
    !>　LabelObjectのkeyのデータをvalueに設定する。
    subroutine set_value_LableObject(self, key, value)
+      use, intrinsic :: iso_fortran_env, stderr=>error_unit
       implicit none
       class(LabelObject), intent(inout) :: self
       character(LBL_KEY_LENGTH) :: key
@@ -391,6 +489,8 @@ contains
             return
          end if
       end do
+
+      write(stderr, *) 'ERROR: The key "'//trim(key)//'" does not exist.'
    
    end subroutine set_value_LableObject
 
