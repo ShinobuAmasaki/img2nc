@@ -37,7 +37,7 @@ module keys_m
    character(21), parameter, public :: IMAGE_CENTER_LATITUDE  = 'IMAGE_CENTER_LATITUDE'
    character(22), parameter, public :: IMAGE_CENTER_LONGITUDE = 'IMAGE_CENTER_LONGITUDE'
    ! Followings are defined in MOLA's lbl file:
-   character(11), parameter, public :: FILE_RECORDS           = 'FILE_RECORDS'   
+   character(12), parameter, public :: FILE_RECORDS           = 'FILE_RECORDS'   
    character(12), parameter, public :: RECORD_BYTES           = 'RECORD_BYTES'   
    character(15), parameter, public :: SPACECRAFT_NAME        = 'SPACECRAFT_NAME'
    character(18), parameter, public :: START_ORBIT_NUMBER     = 'START_ORBIT_NUMBER'

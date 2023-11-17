@@ -17,4 +17,4 @@ library = false
 
 [[executable]]
 name = 'img2nc-mola'
-main = 'main-mola.f90'
+main = 'main-mola-1proc.f90'

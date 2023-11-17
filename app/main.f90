@@ -3,6 +3,7 @@ program main
    use mpi_f08
    use netcdf
    use img2nc
+   use sldem2013
    implicit none
    
    integer(int32) :: ierr, itag
