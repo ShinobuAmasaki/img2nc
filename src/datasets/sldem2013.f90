@@ -11,7 +11,7 @@ module sldem2013
       module procedure :: allocate_lists_sldem2013
    end interface 
 
-   interface create_filelist
+   interface create_name_list
       module procedure :: create_filelist_sldem2013
    end interface
 

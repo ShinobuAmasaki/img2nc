@@ -2,31 +2,100 @@ module mola_megdr
    use, intrinsic :: iso_fortran_env
    use :: base_m
    implicit none
+   private
+
+   public :: outline_mola
+   public :: create_data_name
+   public :: create_name_list
+   public :: allocate_lists
+   public :: get_siz_lon_meg128
+   public :: get_siz_lat_meg128
 
    interface outline_mola
-      procedure :: outline__mola_megdr
+      procedure :: outline__mola_meg128
    end interface
 
-   interface create_data_name_mola
+   interface create_data_name
       module procedure :: create_data_name_mola
    end interface
 
-   interface create_name_list_mola
+   interface create_name_list
       module procedure :: create_name_list_mola
-   end interface 
+   end interface
+
+   interface allocate_lists
+      module procedure :: allocate_lists_mola
+   end interface
 
 contains
 
-   function outline__mola_megdr(edge) result(res)
+   function outline__mola_meg128(edge) result(res)
       use, intrinsic :: iso_fortran_env
       use :: boundary_t
       implicit none
       type(boundary), intent(in) :: edge
       type(boundary) :: res
 
+      integer :: west, east, south, north
 
+      west = edge%get_west()
+      east = edge%get_east()
+      south = edge%get_south()
+      north = edge%get_north()
+
+      select case(west)
+      case (:-91)
+         call res%set_west(-180)
+      case (-90:-1)
+         call res%set_west(-90)
+      case (0:89)
+         call res%set_west(0)
+      case (90:179)
+         call res%set_west(90)
+      case (180:269)
+         call res%set_west(180)
+      case (270:)
+         call res%set_west(270)
+      end select
+
+      select case(east)
+      case (:-90)
+         call res%set_east(-90)
+      case (-89:0)
+         call res%set_east(0)
+      case (1:90)
+         call res%set_east(90)
+      case (91:180)
+         call res%set_east(180)
+      case (181:270)
+         call res%set_east(270)
+      case (271:)
+         call res%set_east(360)
+      end select
+
+      select case(south)
+      case (:-45)
+         call res%set_south(-88)
+      case (-44:-1)
+         call res%set_south(-44)
+      case (0:43)
+         call res%set_south(0)
+      case (44:)
+         call res%set_south(44)
+      end select 
+
+      select case (north)
+      case (:-44)
+         call res%set_north(-44)
+      case (-43:0)
+         call res%set_north(0)
+      case (1:44)
+         call res%set_north(44)
+      case (45:)
+         call res%set_north(88)
+      end select
       
-   end function outline__mola_megdr
+   end function outline__mola_meg128
    
 
    subroutine create_data_name_mola(west_arg, north_arg, code, kind_arg)
@@ -86,11 +155,34 @@ contains
    end subroutine create_data_name_mola
 
 
+   subroutine allocate_lists_mola(outline, list, numlist_1d, numlist_2d, logical_array)
+      use global_m
+      use boundary_t
+      implicit none
+
+      character(len=MAX_PATH_LEN), intent(out), allocatable :: list(:,:)
+      integer(int32), intent(out), allocatable :: numlist_2d(:,:), numlist_1d(:)
+      logical, intent(out), allocatable :: logical_array(:,:)
+      type(boundary), intent(in) :: outline 
+      
+      integer(int32) :: lon_size, lat_size
+
+      lon_size = get_siz_lon_meg128(outline%get_west(), outline%get_east())
+      lat_size = get_siz_lat_meg128(outline%get_south(), outline%get_north())
+
+      allocate(list(lon_size, lat_size))
+      allocate(numlist_1d(lon_size*lat_size))
+      allocate(numlist_2d(lon_size, lat_size))
+      allocate(logical_array(lon_size, lat_size))
+
+   end subroutine allocate_lists_mola
+
+
    subroutine create_name_list_mola(data_root, list, edge, kind_arg)
       use :: boundary_t
       implicit none
       character(*), intent(in) :: data_root
-      character(len=MAX_NAME_LEN), intent(out) :: list(:,:)
+      character(len=MAX_PATH_LEN), intent(out) :: list(:,:)
       type(boundary), intent(in) :: edge
       character(len=1), optional :: kind_arg
       type(boundary) :: outline
@@ -109,7 +201,6 @@ contains
       siz_lon = get_siz_lon_meg128(e_west, e_east)
       siz_lat = get_siz_lat_meg128(e_south, e_north)
 
-      print *, siz_lon, siz_lat
 
       do j = 1, siz_lat
 
