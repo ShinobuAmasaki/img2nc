@@ -4,6 +4,7 @@ program main
    use :: netcdf
    use :: img2nc
    use :: mola_megdr
+   use :: nc_c
    
 
    implicit none
@@ -41,11 +42,7 @@ program main
 
    type(buff) :: buff_single
 
-      ! for netcdf
-   integer(int32) :: ncid
-   integer(int32) :: dim_id_lon, dim_id_lat
-   integer(int32) :: var_id_lon, var_id_lat, var_id_elev
-
+   type(nc_t) :: nc
 
    logical :: isExist
 !=====================================================================!
@@ -183,22 +180,7 @@ program main
    end block sync_io
 
    
-   init_nc: block
-      call check( nf90_create_par(outnc, NF90_HDF5, mpi_comm_world%mpi_val, mpi_info_null%mpi_val, ncid))
-         
-      call check( nf90_def_dim(ncid, 'longitude', global_nx, dim_id_lon))
-      call check( nf90_def_dim(ncid, 'latitude', global_ny, dim_id_lat))
-      
-      call check( nf90_def_var(ncid, 'longitude', NF90_DOUBLE, dim_id_lon, var_id_lon))
-      call check( nf90_def_var(ncid, 'latitude', NF90_DOUBLE, dim_id_lat, var_id_lat))
-      call check( nf90_def_var(ncid, 'elevation', NF90_INT, [dim_id_lon, dim_id_lat], var_id_elev, deflate_level=1))
-
-      call check( nf90_put_att(ncid, var_id_lon, 'units', 'deg.'))
-      call check( nf90_put_att(ncid, var_id_lat, 'units', 'deg.'))
-      call check( nf90_put_att(ncid, var_id_elev, 'units', 'meters'))
-
-      call check( nf90_enddef(ncid))
-   end block init_nc
+   call nc%init(outnc, [global_nx, global_ny])
    call mpi_barrier(mpi_comm_world, ierr)
 
 
@@ -228,16 +210,9 @@ program main
       end if
    end block lonlat_prepare
 
-
-   lonlat_putvar: block
-      if (isIm1) then
-         call check( nf90_put_var(ncid, var_id_lon, lon, start=[1], count=[global_nx]))
-         call check( nf90_put_var(ncid, var_id_lat, lat, start=[1], count=[global_ny]))
-      end if
-   end block lonlat_putvar
-
-
-
+   call nc%put_lonlat(lon, lat, count=[global_nx, global_ny])
+  
+   
    parallel_io: block
       integer ::  n 
       integer :: start_nc(2), count_nc(2)
@@ -251,7 +226,8 @@ program main
                start_nc(:) = [(i-1)*local_nx+1, (numlat-j)*local_ny+1]
                count_nc(:) = [local_nx, local_ny]
 
-               call check(nf90_put_var(ncid, var_id_elev, tiles(k)%shrinked_data, start=start_nc, count=count_nc))
+               ! call check(nf90_put_var(nc%ncid, nc%var_id%elev, tiles(k)%shrinked_data, start=start_nc, count=count_nc))
+               call nc%put_elev(tiles(k)%shrinked_data, start=start_nc, count=count_nc)
                k = k + 1
             end if
          end do
@@ -260,7 +236,8 @@ program main
       ! put_varはブロッキングするため、余りのプロセスでは空の書き込み命令を呼びだす。
       n = numlon*numlat
       if ( petot-mod((N/petot+1)*petot, N) < thisis) then
-         call check(nf90_put_var(ncid, var_id_elev, [0d0], start=[1,1], count=[0, 0]))
+         ! call check(nf90_put_var(nc%ncid, nc%var_id%elev, [0d0], start=[1,1], count=[0, 0]))
+         call nc%put_elev_empty()
       end if
 
       print *, "image: ", thisis, " complete: ", trim(adjustl(outnc))
@@ -269,7 +246,7 @@ program main
    end block parallel_io
 
 
-   call check(nf90_close(ncid))
+   call nc%close()
 
    call mpi_finalize()
 
@@ -291,21 +268,6 @@ contains
       call edge%set_north(90)
 
    end subroutine default
-
-
-   subroutine check(status)
-      implicit none
-      integer, intent(in) :: status
-      integer :: ierr
-
-      if (status /= nf90_noerr) then
-         ! ステータスコードから対応するエラーメッセージを取得し、コンソールに表示する。
-         print '(a,i3,a)', 'PE ', thisis, ': '//trim(nf90_strerror(status))
-         ! call mpi_finalize(ierr)
-         stop "Stopped"
-      end if
-
-   end subroutine check
       
 
 end program main

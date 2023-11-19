@@ -23,11 +23,17 @@ module nc_c
       type(varid_t) :: var_id
    contains
       procedure, public  :: init => nc_initialize
+      procedure, public  :: put_lonlat => nc_put_var_lonlat
+      procedure, public  :: put_elev => wrap__nf90_put_var_elevation
+      procedure, public  :: put_elev_empty => nc_put_elev_empty
+      procedure, public  :: close => wrap__nf90_close
       procedure, private :: create_par => wrap__nf90_create_par
       procedure, private :: define_dim => wrap__nf90_def_dim
       procedure, private :: define_var => wrap__nf90_def_var
       procedure, private :: put_attribute => wrap__nf90_put_att
       procedure, private :: end_define => wrap__nf90_enddef
+      procedure, private :: wrap__nf90_put_var_lon
+      procedure, private :: wrap__nf90_put_var_lat
    end type
 
 
@@ -125,5 +131,73 @@ contains
       call check( nf90_enddef(self%ncid))
 
    end subroutine wrap__nf90_enddef
+
+!-------------------------------------------------------------------------------------------!
+   
+   subroutine nc_put_var_lonlat(self, lon, lat, count)
+      implicit none
+      class(nc_t) :: self
+      real(real64), intent(in) :: lon(:), lat(:)
+      integer(int32) :: count(2)
+
+      if (isIm1) then
+         call self%wrap__nf90_put_var_lon(lon, count(1))
+         call self%wrap__nf90_put_var_lat(lat, count(2))
+      end if
+      
+   end subroutine
+
+
+   subroutine wrap__nf90_put_var_lon(self, array, count)
+      implicit none
+      class(nc_t) :: self
+      real(real64), intent(in) :: array(:)
+      integer(int32), dimension(:) :: count(1)
+
+      call check(nf90_put_var(self%ncid, self%var_id%lon, array, start=[1], count=count))
+
+   end subroutine wrap__nf90_put_var_lon
+
+
+   subroutine wrap__nf90_put_var_lat(self, array, count)
+      implicit none
+      class(nc_t) :: self
+      real(real64), intent(in) :: array(:)
+      integer(int32), dimension(:) :: count(1)
+
+      call check(nf90_put_var(self%ncid, self%var_id%lat, array, start=[1], count=count))
+
+   end subroutine wrap__nf90_put_var_lat
+
+!-------------------------------------------------------------------------------------------!
+
+   subroutine wrap__nf90_put_var_elevation(self, array, start, count)
+      implicit none
+      class(nc_t) :: self
+      integer(int16), intent(in) :: array(:,:)
+      integer(int32), intent(in) :: start(2)
+      integer(int32), intent(in) :: count(2)
+
+
+      call check(nf90_put_var(self%ncid, self%var_id%elev, array, start=start, count=count))
+   end subroutine wrap__nf90_put_var_elevation
+
+
+   subroutine nc_put_elev_empty (self)
+      implicit none
+      class(nc_t) :: self
+
+      call check(nf90_put_var(self%ncid, self%var_id%elev, [0], start=[1,1], count=[0,0]))
+
+   end subroutine
+!-------------------------------------------------------------------------------------------!
+
+   subroutine wrap__nf90_close(self)
+      implicit none
+      class(nc_t) :: self
+
+      call check( nf90_close(self%ncid))
+
+   end subroutine wrap__nf90_close
 
 end module nc_c
