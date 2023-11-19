@@ -212,23 +212,21 @@ program main
 
    call nc%put_lonlat(lon, lat, count=[global_nx, global_ny])
   
-   
+
    parallel_io: block
       integer ::  n 
       integer :: start_nc(2), count_nc(2)
       k = 1
       do j = 1, numlat
          do i = 1, numlon
-
             if (distri_logical(i,j)) then
-
 
                start_nc(:) = [(i-1)*local_nx+1, (numlat-j)*local_ny+1]
                count_nc(:) = [local_nx, local_ny]
 
-               ! call check(nf90_put_var(nc%ncid, nc%var_id%elev, tiles(k)%shrinked_data, start=start_nc, count=count_nc))
                call nc%put_elev(tiles(k)%shrinked_data, start=start_nc, count=count_nc)
                k = k + 1
+               
             end if
          end do
       end do
@@ -236,7 +234,6 @@ program main
       ! put_varはブロッキングするため、余りのプロセスでは空の書き込み命令を呼びだす。
       n = numlon*numlat
       if ( petot-mod((N/petot+1)*petot, N) < thisis) then
-         ! call check(nf90_put_var(nc%ncid, nc%var_id%elev, [0d0], start=[1,1], count=[0, 0]))
          call nc%put_elev_empty()
       end if
 
