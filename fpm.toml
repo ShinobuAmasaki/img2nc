@@ -16,5 +16,9 @@ link = ["m", "netcdff"] # DON'T change the order for ifort
 library = false
 
 [[executable]]
+name = 'img2nc-mola-single'
+main = 'main-mola-1tile.f90'
+
+[[executable]]
 name = 'img2nc-mola'
-main = 'main-mola-1proc.f90'
+main = 'main-mola.f90'
