@@ -1,9 +1,10 @@
 program main
    use, intrinsic :: iso_fortran_env
+   use :: mpi_f08
+   use :: netcdf
    use :: img2nc
    use :: mola_megdr
-   use :: netcdf
-   use :: mpi_f08
+   
 
    implicit none
 
@@ -21,7 +22,7 @@ program main
    character(len=MAX_PATH_LEN), allocatable :: file_list_local(:)
    
    type(boundary) :: edge, outline
-   integer(int32) :: resolution, coarse
+   integer(int32) :: coarse !, resolution
 
    integer(int32) :: numlon, numlat
    integer(int32) :: nx, ny
@@ -51,11 +52,10 @@ program main
 
    call mpi_initialize(ierr)
    
-   call default(data_dir, outnc, resolution, edge)
+   call default(data_dir, outnc, coarse, edge)
 
    call preprocess(data_dir, outnc, range, coarse, edge)
 
-   coarse = 16
 
    outline = outline_mola(edge)
 
@@ -64,19 +64,20 @@ program main
 
    call create_name_list(data_dir, file_list, outline)
 
-   distri_logical(:, :) = .true. ! For single proc only
+   call set_distribution(distri_1d, distri_2d, distri_logical, outline)
+
+
+   numlon = get_siz_lon_meg128(outline%get_west(), outline%get_east())
+   numlat = get_siz_lat_meg128(outline%get_south(), outline%get_north())
 
 
    do j = 1, size(file_list, dim=2)
       do i = 1, size(file_list, dim=1)
          file_list(i, j) = trim(file_list(i,j))
          ! inquire(file=file_list(i,j), exist=isExist)
-         print *, trim(file_list(i,j))
       end do
    end do
 
-   numlon = get_siz_lon_meg128(outline%get_west(), outline%get_east())
-   numlat = get_siz_lat_meg128(outline%get_south(), outline%get_north())
 
    block
       n_jobs_total = numlon*numlat
@@ -85,6 +86,7 @@ program main
 
       allocate(file_list_local(n_jobs))
    end block 
+
 
    k = 1
    do j = 1, numlat
@@ -97,16 +99,15 @@ program main
    end do
 
 
-   allocate(tiles(n_jobs))
-   allocate(lbls(n_jobs))
+   allocate(tiles(1:n_jobs))
+
+   allocate(lbls(1:n_jobs))
 
    read_lbls: block
       integer(int32) :: uni = 100
       do k = 1, n_jobs
          
          filename = trim(adjustl(file_list_local(k)))//'.lbl'
-
-         print *, trim(filename)
 
          call lbls(k)%init()
          inquire(file=filename, exist=isExist)
@@ -214,8 +215,8 @@ program main
          allocate(lon(global_nx))
          allocate(lat(global_ny))
 
-         west = dble(edge%get_west())
-         south = dble(edge%get_south())
+         west = dble(outline%get_west())
+         south = dble(outline%get_south())
 
          do concurrent(i = 1:global_nx)
             lon(i) = dble(i-1)*step_lon + west + offset_x
@@ -274,13 +275,13 @@ program main
 
 contains
 
-   subroutine default(data_dir, outnc, resolution, edge)
+   subroutine default(data_dir, outnc, coarse, edge)
       implicit none
       character(*), intent(inout) :: data_dir, outnc
       type(boundary), intent(out) :: edge
-      integer(int32) ::  resolution
+      integer(int32) ::  coarse
 
-      resolution = 128
+      coarse = 16
       outnc = './mola.nc'
       data_dir = './mola-megdr'
 

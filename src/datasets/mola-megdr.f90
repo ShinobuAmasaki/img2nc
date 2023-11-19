@@ -8,6 +8,7 @@ module mola_megdr
    public :: create_data_name
    public :: create_name_list
    public :: allocate_lists
+   public :: set_distribution
    public :: get_siz_lon_meg128
    public :: get_siz_lat_meg128
 
@@ -26,6 +27,10 @@ module mola_megdr
    interface allocate_lists
       module procedure :: allocate_lists_mola
    end interface
+
+   interface set_distribution
+      module procedure :: set_distribution_mola
+   end interface 
 
 contains
 
@@ -224,6 +229,44 @@ contains
    
    end subroutine create_name_list_mola
 
+   subroutine set_distribution_mola(distri_1d, distri_2d, distri_logical, outline)
+      use global_m
+      use boundary_t
+      implicit none
+      integer(int32), intent(inout) :: distri_1d(:), distri_2d(:, :)
+      logical, intent(inout) :: distri_logical(:, :)
+      type(boundary), intent(in) :: outline
+
+      integer :: petot_max    ! the maximum value of processor emement total 
+      integer :: num_i, num_j, i, j
+
+      num_i = get_siz_lon_meg128(outline%get_west(), outline%get_east())
+      num_j = get_siz_lat_meg128(outline%get_south(), outline%get_north())
+
+      petot_max = num_i*num_j
+      if (petot > petot_max) then 
+         if (isIm1) then
+            write(stderr, *) "ERROR: Too many processor elements. Max is: ", petot_max
+         end if
+         call gently_stop()
+      end if
+
+      do i = 1, num_i*num_j
+         if (petot /=1) then
+            distri_1d(i) = mod(i-1, petot) + 1
+         else
+            distri_1d(i) = 1
+         end if
+      end do
+
+      distri_2d = reshape(distri_1d, [num_i, num_j])
+
+      do j = 1, num_j
+         do i = 1, num_i
+            distri_logical(i, j) = distri_2d(i, j) == thisis
+         end do
+      end do
+   end subroutine set_distribution_mola
    !
    function get_siz_lon_meg128(west, east) result(res)
       implicit none
@@ -301,5 +344,6 @@ contains
       end select
 
    end function get_siz_lat_meg128
+
 
 end module mola_megdr
