@@ -3,9 +3,7 @@ program main
    use :: mpi_f08
    use :: netcdf
    use :: img2nc
-   use :: mola_megdr
-   use :: nc_c
-   
+   use :: mola_megdr 
 
    implicit none
 
@@ -226,7 +224,7 @@ program main
 
                call nc%put_elev(tiles(k)%shrinked_data, start=start_nc, count=count_nc)
                k = k + 1
-               
+
             end if
          end do
       end do

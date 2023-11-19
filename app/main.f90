@@ -4,7 +4,6 @@ program main
    use netcdf
    use img2nc
    use sldem2013
-   use :: nc_c
    implicit none
    
    integer(int32) :: ierr, itag

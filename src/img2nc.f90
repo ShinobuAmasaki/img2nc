@@ -7,6 +7,7 @@ module img2nc
   use buff_t
   use Tile_m
   use global_m
+  use nc_c
   implicit none
 
 
