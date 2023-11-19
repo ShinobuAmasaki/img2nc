@@ -89,7 +89,7 @@ $ fpm build --compiler mpif90 \
 	 --link-flag "-L/lib/x86_64-linux-gnu"
 ```
 
-## Usage
+## Usage - Moon: SLDEM2013
 As an example, let's draw  Lambert crater at 21 deg. west longitude and 26 deg. north latitude on the front side of the Moon.
 
 ### Downloading DEM
