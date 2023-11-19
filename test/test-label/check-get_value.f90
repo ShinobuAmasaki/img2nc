@@ -19,7 +19,7 @@ program check_lbl_get_value
 
    print *, trim(filedata%get_value('key1'))
 
-   open (10, file='dat/lon000/DTM_MAP_01_N00E000S01E001SC.lbl', form='unformatted', action='read', access='stream')
+   open (10, file='sldem2013/lon000/DTM_MAP_01_N00E000S01E001SC.lbl', form='unformatted', action='read', access='stream')
    call load_file_buffered(10, buff)
 
    print '(a)', trim(adjustl(buff))
