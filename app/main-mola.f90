@@ -68,13 +68,6 @@ program main
 
    call set_distribution(distri_1d, distri_2d, distri_logical, outline)
 
-   if (isIm1) then
-      print '(3(a, 1x))', trim(file_list(1, 1)), trim(file_list(2, 1)), trim(file_list(3, 1))
-      print '(3(a, 1x))', trim(file_list(1, 2)), trim(file_list(2, 2)), trim(file_list(3, 2))
-      print '(3(a, 1x))', trim(file_list(1, 3)), trim(file_list(2, 3)), trim(file_list(3, 3))
-      print '(3(a, 1x))', trim(file_list(1, 4)), trim(file_list(2, 4)), trim(file_list(3, 4))
-   end if 
-
 
    numlon = get_siz_lon_meg128(outline%get_west(), outline%get_east())
    numlat = get_siz_lat_meg128(outline%get_south(), outline%get_north())
@@ -199,7 +192,7 @@ program main
 
          deallocate(buff_single%data)
 
-         print '(i3, a, a, i5, a, i5, a)',thisis, trim(tiles(k)%get_path()), ': loaded. (', k, '/', n_jobs, ')'
+         print '(a, a, i5, a, i5, a)', trim(tiles(k)%get_path()), ': loaded. (', k, '/', n_jobs, ')'
 
       end do
    end block sync_io
@@ -319,20 +312,10 @@ program main
 
    call nc%put_lonlat(lon, lat, count=[size(lon), size(lat)])
 
-   print *, thisis, distri_logical
-
 
    parallel_io: block
       integer ::  n
-      integer :: start_nc(2), count_nc(2) !, global_south_start
-      logical :: is_south_trimed, is_north_trimed
-
-      is_south_trimed = outline%get_south() /= edge%get_south()
-      is_north_trimed = outline%get_north() /= edge%get_north()
-
-      ! print *, 'is_south_trimed', is_south_trimed
-      ! print *, 'is_north_trimed', is_north_trimed
-
+      integer :: start_nc(2), count_nc(2) 
 
       k = 1
       do j = 1, numlat
@@ -375,7 +358,7 @@ program main
                   ! print *, thisis, 'north edge'
                   start_nc(2) = 1 + (local_ny - idx_south_global +1) + (j-2)*local_ny
                   count_nc(2) = idx_north_local
-                  if (is_north_trimed) count_nc(2) = count_nc(2)
+
 
                else
                   ! print *, thisis, 'middle'
@@ -383,14 +366,8 @@ program main
                   count_nc(2) = local_ny
                end if
    
-               print *, thisis, k, 'start_nc: ', start_nc(1)
-               print *, thisis, k, 'count_nc: ', count_nc(1)
-
-               ! if (thisis == 1) then
-               !    tiles(1)%shrinked_data(:,:) = 30000_int16
-               !    tiles(2)%shrinked_data(:,:) = 30000_int16
-               !    tiles(3)%shrinked_data(:,:) = 30000_int16
-               ! end if
+               ! print *, thisis, k, 'start_nc: ', start_nc(1)
+               ! print *, thisis, k, 'count_nc: ', count_nc(1)
 
                call nc%put_elev(tiles(k)%shrinked_data, start=start_nc, count=count_nc)
                k = k + 1
