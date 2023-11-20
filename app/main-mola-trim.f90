@@ -45,8 +45,11 @@ program main
    logical :: isExist
 
    logical, allocatable :: is_on_west_edge(:,:), is_on_east_edge(:,:)
-   integer(int32) :: idx_w_global, idx_e_global
+   logical, allocatable :: is_on_south_edge(:,:), is_on_north_edge(:,:)
+   integer(int32) :: idx_west_global, idx_east_global
    integer(int32) :: idx_west_local, idx_east_local
+   integer(int32) :: idx_south_global, idx_north_global
+   integer(int32) :: idx_south_local, idx_north_local
 !=====================================================================!
 
    call mpi_initialize(ierr)
@@ -72,9 +75,13 @@ program main
    triming_prepare: block
       allocate(is_on_west_edge(numlon, numlat))
       allocate(is_on_east_edge(numlon, numlat))
+      allocate(is_on_south_edge(numlon, numlat))
+      allocate(is_on_north_edge(numlon, numlat ))
 
       call set_is_on_west_edge(is_on_west_edge)
       call set_is_on_east_edge(is_on_east_edge)
+      call set_is_on_south_edge(is_on_south_edge)
+      call set_is_on_north_edge(is_on_north_edge)
 
    end block triming_prepare
 
@@ -201,21 +208,21 @@ program main
          offset_y = -step_lat/2d0
       end if
 
-      if (isIm1) then
-         allocate(lon(global_nx))
-         allocate(lat(global_ny))
+      
+      allocate(lon(global_nx))
+      allocate(lat(global_ny))
 
-         west = dble(outline%get_west())
-         south = dble(outline%get_south())
+      west = dble(outline%get_west())
+      south = dble(outline%get_south())
 
-         do concurrent(i = 1:global_nx)
-            lon(i) = dble(i-1)*step_lon + west + offset_x
-         end do
+      do concurrent(i = 1:global_nx)
+         lon(i) = dble(i-1)*step_lon + west + offset_x
+      end do
 
-         do concurrent(j = 1:global_ny)
-            lat(j) = dble(j)*step_lat + south + offset_y
-         end do
-      end if
+      do concurrent(j = 1:global_ny)
+         lat(j) = dble(j)*step_lat + south + offset_y
+      end do
+      
    end block lonlat_prepare
 
   
@@ -226,27 +233,46 @@ program main
 
       do i = 1, global_nx
          if (edge%get_west() <= lon(i)) then
-            idx_w_global = i
+            idx_west_global = i
             exit 
          end if
       end do 
 
       do i = global_nx, 1, -1
          if (lon(i) <= edge%get_east()) then
-            idx_e_global = i
+            idx_east_global = i
             exit
          end if
       end do
 
+      do j = global_ny, 1, -1 
+         if (lat(j) <= edge%get_south()) then
+            idx_south_global = j
+            exit
+         end if
+      end do
 
-      idx_west_local = idx_w_global
-      idx_east_local = mod(idx_e_global, local_nx)
+      do j = global_ny, 1, -1
+         if ( lat(j) <= edge%get_north()) then 
+            idx_north_global = j
+            exit
+         end if
+      end do 
+
+
+      idx_west_local = idx_west_global
+      idx_east_local = mod(idx_east_global, local_nx)
       if (idx_east_local == 0) idx_east_local =  local_nx
+
+      idx_south_local = idx_south_global
+      idx_north_local = mod(idx_north_global, local_ny)
+      if (idx_north_local == 0) idx_north_local = local_ny
 
       k = 1 
       do j = 1, numlat
          do i = 1, numlon
             if (distri_logical(i, j)) then
+              
                if (is_on_west_edge(i,j) .and. is_on_east_edge(i,j)) then
                   call triming_west_east(tiles(k)%shrinked_data, idx_west_local, idx_east_local)
                
@@ -254,8 +280,18 @@ program main
                   call triming_west(tiles(k)%shrinked_data, idx_west_local)
 
                else if (is_on_east_edge(i,j)) then
-                  call triming_east(tiles(k)%shrinked_data, idx_east_local)
+                  call triming_east(tiles(k)%shrinked_data, idx_east_local)    
+               end if
+
+
+               if (is_on_south_edge(i,j) .and. is_on_north_edge(i,j)) then
+                  call triming_south_north(tiles(k)%shrinked_data, idx_south_local, idx_north_local)
                
+               else if (is_on_south_edge(i,j)) then
+                  call triming_south(tiles(k)%shrinked_data, idx_south_local)
+
+               else if (is_on_north_edge(i,j)) then
+                  call triming_north(tiles(k)%shrinked_data, idx_north_local)
                end if
 
                k = k + 1
@@ -263,15 +299,16 @@ program main
          end do 
       end do
 
-      print *, size(tiles(1)%shrinked_data, dim=1), size(tiles(1)%shrinked_data, dim=2)
+
 
    end block triming
 
 
-   call nc%init(outnc, [idx_e_global-idx_w_global+1, global_ny])
+   call nc%init(outnc, [idx_east_global-idx_west_global+1, idx_north_global-idx_south_global+1])
    call mpi_barrier(mpi_comm_world, ierr)
 
-   call nc%put_lonlat(lon(idx_w_global:idx_e_global), lat, count=[idx_e_global-idx_w_global+1, global_ny])
+   call nc%put_lonlat(lon(idx_west_global:idx_east_global), lat(idx_south_global:idx_north_global), &
+                        count=[idx_east_global-idx_west_global+1, idx_north_global-idx_south_global+1])
 
 
    parallel_io: block
@@ -284,26 +321,41 @@ program main
 
                if (is_on_west_edge(i,j) .and. is_on_east_edge(i,j)) then
                
-                  start_nc(:) = [(i-1)*local_nx+1, (numlat-j)*local_ny+1]
-                  count_nc(:) = [idx_east_local-idx_west_local+1, local_ny]
-                  
+                  start_nc(1) = (i-1)*local_nx+1
+                  count_nc(1) = idx_east_local-idx_west_local+1
+
                else if (is_on_west_edge(i,j)) then
 
-                  start_nc(:) = [(i-1)*local_nx+1, (numlat-j)*local_ny+1]
-                  count_nc(:) = [local_nx-idx_w_global+1, local_ny]
-
+                  start_nc(1) = (i-1)*local_nx+1
+                  count_nc(1) = local_nx-idx_west_global+1
 
                else if (is_on_east_edge(i,j)) then
-                  start_nc(:) = [(i-1)*local_nx-idx_w_global+2, (numlat-j)*local_ny+1]
-                  count_nc(:) = [idx_east_local, local_ny]
+                  start_nc(1) = (i-1)*local_nx-idx_west_global+2
+                  count_nc(1) = idx_east_local
                else 
-                  start_nc(:) = [(i-1)*local_nx-idx_w_global+2, (numlat-j)*local_ny+1]
-                  count_nc(:) = [local_nx, local_ny]
+                  start_nc(1) = (i-1)*local_nx-idx_west_global+2
+                  count_nc(1) = local_nx
+
+               end if
+
+
+               if (is_on_south_edge(i,j) .and. is_on_north_edge(i,j)) then
+                  start_nc(2) = (numlat-j)*local_ny+1
+                  count_nc(2) = idx_north_local - idx_south_local + 1
+               
+               else if (is_on_south_edge(i,j)) then
+                  start_nc(2) = (numlat-j)*local_ny+1
+                  count_nc(2) = local_ny - idx_south_global+1
+               
+               else if (is_on_north_edge(i,j)) then
+                  start_nc(2) = (numlat-j)*local_ny - idx_south_global +2
+                  count_nc(2) = idx_north_local
+               else
+                  start_nc(2) = (numlat-j)*local_ny - idx_south_global +2
+                  count_nc(2) = local_ny
                end if
    
 
-               print *, k, 'start_nc: ', start_nc
-               print *, k, 'count_nc: ', count_nc
                call nc%put_elev(tiles(k)%shrinked_data, start=start_nc, count=count_nc)
                k = k + 1
 
@@ -349,7 +401,7 @@ contains
 
    subroutine set_is_on_west_edge(is_on_west_edge)
       implicit none
-      logical :: is_on_west_edge(:,:)
+      logical, intent(out) :: is_on_west_edge(:,:)
 
       is_on_west_edge(:, :) = .false.
 
@@ -360,7 +412,7 @@ contains
 
    subroutine set_is_on_east_edge(is_on_east_edge)
       implicit none
-      logical :: is_on_east_edge(:,:)
+      logical, intent(out) :: is_on_east_edge(:,:)
 
       is_on_east_edge(:, :) = .false.
 
@@ -368,7 +420,29 @@ contains
 
    end subroutine set_is_on_east_edge
 
-   
+
+   subroutine set_is_on_south_edge(is_on_south_edge)
+      implicit none
+      
+      logical, intent(out) :: is_on_south_edge(:,:)
+
+      is_on_south_edge(:, :) = .false.
+
+      is_on_south_edge(:, size(is_on_south_edge, dim=2)) = .true.
+   end subroutine set_is_on_south_edge
+
+
+   subroutine set_is_on_north_edge(is_on_north_edge)
+      implicit none
+      
+      logical, intent(out) :: is_on_north_edge(:, :)
+
+      is_on_north_edge(:, :) = .false.
+
+      is_on_north_edge(:, 1) = .true.
+   end subroutine set_is_on_north_edge
+
+    
    subroutine triming_west_east(array, idx_w, idx_e)
       implicit none
       integer(int16), allocatable, intent(inout) :: array(:,:)
@@ -433,6 +507,101 @@ contains
    end subroutine triming_east 
 
    
+   subroutine triming_south_north(array, idx_s, idx_n)
+      implicit none
+      integer(int16), allocatable, intent(inout) :: array(:, :)
+      integer(int32), intent(in) :: idx_s, idx_n
+
+      integer(int16), allocatable :: buff(:, :)
+      integer(int32) :: nx
+
+      nx = size(array, dim=1)
+
+      allocate(buff(nx, idx_n-idx_s+1))
+
+      buff(:,:) = array(:, idx_s:idx_n)
+
+      deallocate(array)
+      allocate(array(nx, idx_n-idx_s+1))
+
+      array(:, :) = buff(:, :)
+
+   end subroutine triming_south_north 
+
+
+   subroutine triming_south(array, idx_s)
+      implicit none
+      integer(int16), allocatable, intent(inout) :: array(:,:)
+      integer(int32), intent(in) :: idx_s
+
+      integer(int16), allocatable :: buff(:,:)
+      integer(int32) :: nx, ny
+
+      nx = size(array, dim=1)
+      ny = size(array, dim=2)
+
+      allocate(buff(nx, ny-idx_s+1))
+
+      buff(:, :) = array(:, idx_s:ny)
+
+      deallocate(array)
+      allocate(array(nx, ny-idx_s+1))
+
+      array(:,:) = buff(:,:)
+
+   end subroutine triming_south
+
+
+   subroutine triming_north(array, idx_n)
+      implicit none
+      integer(int16), allocatable, intent(inout) :: array(:,:)
+      integer(int32), intent(in) :: idx_n
+
+      integer(int16), allocatable :: buff(:,:)
+      integer(int32) :: nx, ny
+
+      nx = size(array, dim=1)
+
+      allocate(buff(nx, idx_n))
+
+      buff(:, :) = array(:, 1:idx_n)
+
+      deallocate(array)
+      allocate(array(nx, idx_n))
+
+      array(:,:) = buff(:,:)
+
+   end subroutine triming_north
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
