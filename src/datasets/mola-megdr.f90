@@ -314,35 +314,32 @@ contains
       integer(int32), intent(in) :: south, north
       integer(int32) :: res
 
+      integer :: most_north, most_south 
+
       select case (north)
       case (45:)
-         if (south >= 45) then
-            res = 1
-         else if (south > 0) then
-            res = 2
-         else if (south >= -44) then
-            res = 3
-         else
-            res = 4
-         end if
+         most_north = 4
       case (1:44)
-         if (south >= 1) then
-            res = 1
-         else if (south >= -44) then
-            res = 2
-         else
-            res = 3
-         end if
+         most_north = 3
       case (-43:0)
-         if (south >= -44) then
-            res = 1
-         else
-            res = 2
-         end if
+         most_north = 2
       case (:-44)
-         res = 1
+         most_north = 1
       end select
 
+      select case (south)
+      case (44:)
+         most_south = 3
+      case (0:43)
+         most_south = 2
+      case (-44:-1)
+         most_south = 1
+      case (:-45)
+         most_south = 0
+      end select
+      
+      res = most_north - most_south
+      
    end function get_siz_lat_meg128
 
 
