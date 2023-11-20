@@ -12,7 +12,7 @@ program main
    
    character(len=MAX_PATH_LEN) :: filename, data_dir
    character(len=MAX_NAME_LEN) :: outnc
-   character(len=15) :: range
+   character(len=MAX_RANGE_LEN) :: range
 
    integer(int32), allocatable :: distri_1d(:), distri_2d(:,:)
    logical, allocatable :: distri_logical(:, :)
@@ -67,6 +67,11 @@ program main
    call create_name_list(data_dir, file_list, outline)
 
    call set_distribution(distri_1d, distri_2d, distri_logical, outline)
+
+   print *, edge%get_west()
+   print *, edge%get_east()
+   print *, edge%get_south()
+   print *, edge%get_north()
 
 
    numlon = get_siz_lon_meg128(outline%get_west(), outline%get_east())

@@ -6,6 +6,7 @@ module preprocess_m
    use :: argument_t
    use :: boundary_t
    use :: global_m
+   use :: base_m
 
 
    integer(int32) :: argc
@@ -28,13 +29,15 @@ contains
 
    subroutine preprocess (data_dir, outnc, range, coarse, edge )
       implicit none
-      character(*),   intent(inout) :: data_dir, outnc
-      character(15),  intent(inout) :: range
-      integer(int32), intent(inout) :: coarse
-      type(boundary), intent(inout)   :: edge
+      character(*),   intent(out) :: data_dir, outnc
+      character(MAX_RANGE_LEN),  intent(out) :: range
+      integer(int32), intent(out) :: coarse
+      type(boundary), intent(out)   :: edge
       
       call get_value_from_args(data_dir, outnc, range, coarse)
       call validate_range(range, edge)
+
+      print *, outnc
 
       if (.not. is_valid_coarse(coarse)) then
          write(stderr, *) "ERROR: invalid coarse number specified."
@@ -46,17 +49,20 @@ contains
 
    subroutine get_value_from_args (data_dir, outnc, range, coarse)
       implicit none
-      character(*),   intent(inout) :: data_dir, outnc
-      character(15),  intent(inout) :: range
-      integer(int32), intent(inout) :: coarse
+      character(*),   intent(out) :: data_dir, outnc
+      character(MAX_RANGE_LEN),  intent(out) :: range
+      integer(int32), intent(out) :: coarse
       integer :: ios
       
-      character(3) :: coarse_char
+      character(4) :: coarse_char
+      character(:), allocatable :: outnc_buff
+      character(:), allocatable :: range_buff
 
       integer :: index ! the indices of the value in arguments
 
-      range = ''
+      range_buff = ''
       coarse_char = ''
+      outnc_buff  = ''
 
       call get_arguments(argc, arg, arg_whole)
 
@@ -76,7 +82,8 @@ contains
          ! -oオプションフラグが指定されている場合、値OUTNCはフラグの次の引数から読み取る。
          index = get_flag_index(o_flag_l, o_flag_s, arg) + 1
 
-         outnc = trim(adjustl( arg(index)%v ))
+         outnc_buff = trim(adjustl( arg(index)%v ))
+         print *, outnc_buff
       end if
 
       if ((wrap(d_flag_l) .in. arg_whole) .or. (wrap(d_flag_s) .in. arg_whole)) then
@@ -91,13 +98,13 @@ contains
 
          ! -rのオプションフラグが指定されている場合、値RANGEはフラグの次の引数から読み取る。
          index = get_flag_index(r_flag_l, r_flag_s, arg) + 1
-         range = trim(adjustl( arg(index)%v ))
+         range_buff = trim(adjustl( arg(index)%v ))
       else
          ! 指定されていない場合、値RANGEは最後の引数にあると仮定する。
          block
             integer:: p ! the index of the last space 
             p = scan(arg_whole, ' ', back=.true.)
-            range = trim(adjustl(arg_whole(p:len(arg_whole))))
+            range_buff = trim(adjustl(arg_whole(p:len(arg_whole))))
             ! print *, range
          end block
       end if
@@ -116,7 +123,10 @@ contains
          end if
 
       end if
-      
+
+      outnc = trim(adjustl(outnc_buff))
+      range = trim(adjustl(range_buff))
+
    end subroutine get_value_from_args
 
 
@@ -127,12 +137,15 @@ contains
       integer(int32) :: p, q, r, n
       integer :: ios
       integer :: west, east, south, north
+      character(256) :: msg
 
       if (trim(adjustl(range)) == '') return
 
       edge = boundary() 
 
       n = len(trim(adjustl( range )))
+
+      print *, range
 
       ! West
       p = index(range, '/')
@@ -151,11 +164,13 @@ contains
       call assert_iostat(ios)
       call edge%set_south(south)
 
-      read(range(r+1:n), *, iostat=ios) north
+      read(range(r+1:n), *, iostat=ios, iomsg=msg) north
+      if(ios /= 0)  write(stderr, *) msg
       call assert_iostat(ios)
       call edge%set_north(north)
 
       call edge%check_valid_range()
+
 
       if (.not. edge%get_is_valid()) then
          write(stderr, *) "ERROR: invalid range specified."

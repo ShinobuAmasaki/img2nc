@@ -7,6 +7,7 @@ module base_m
 
    integer, parameter :: MAX_PATH_LEN = 1024
    integer, parameter :: MAX_NAME_LEN = 256
+   integer, parameter :: MAX_RANGE_LEN = 17
 
    integer(int16), parameter :: MINUS_9999_AFTER_SWAP16 = -3624_int16
 
