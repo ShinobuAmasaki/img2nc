@@ -323,7 +323,7 @@ contains
       
       class(boundary), intent(inout) :: self
 
-      if (self%get_west() > 0) then
+      if (self%get_west() >= 0) then
          call self%check(is_west_edge_between_0_and_359)
          call self%check(is_east_edge_between_1_and_360)
       else
