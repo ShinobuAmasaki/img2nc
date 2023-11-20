@@ -37,7 +37,6 @@ contains
       call get_value_from_args(data_dir, outnc, range, coarse)
       call validate_range(range, edge)
 
-      print *, outnc
 
       if (.not. is_valid_coarse(coarse)) then
          write(stderr, *) "ERROR: invalid coarse number specified."
@@ -83,7 +82,7 @@ contains
          index = get_flag_index(o_flag_l, o_flag_s, arg) + 1
 
          outnc_buff = trim(adjustl( arg(index)%v ))
-         print *, outnc_buff
+
       end if
 
       if ((wrap(d_flag_l) .in. arg_whole) .or. (wrap(d_flag_s) .in. arg_whole)) then
@@ -144,8 +143,6 @@ contains
       edge = boundary() 
 
       n = len(trim(adjustl( range )))
-
-      print *, range
 
       ! West
       p = index(range, '/')
