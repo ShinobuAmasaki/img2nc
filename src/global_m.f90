@@ -23,12 +23,21 @@ contains
    subroutine gently_stop()
       use base_m
       implicit none
-      integer :: rank, ierr
+      integer :: ierr
 
       if(isIm1) call print_usage()
       call mpi_finalize(ierr)
       stop
 
    end subroutine gently_stop
+
+   subroutine gently_stop_quiet()
+      implicit none
+      integer :: ierr
+      
+      call mpi_initialize(ierr)
+
+   end subroutine gently_stop_quiet
+     
 
 end module global_m
