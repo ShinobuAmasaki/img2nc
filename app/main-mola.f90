@@ -68,6 +68,13 @@ program main
 
    call set_distribution(distri_1d, distri_2d, distri_logical, outline)
 
+   if (isIm1) then
+      print '(3(a, 1x))', trim(file_list(1, 1)), trim(file_list(2, 1)), trim(file_list(3, 1))
+      print '(3(a, 1x))', trim(file_list(1, 2)), trim(file_list(2, 2)), trim(file_list(3, 2))
+      print '(3(a, 1x))', trim(file_list(1, 3)), trim(file_list(2, 3)), trim(file_list(3, 3))
+      print '(3(a, 1x))', trim(file_list(1, 4)), trim(file_list(2, 4)), trim(file_list(3, 4))
+   end if 
+
 
    numlon = get_siz_lon_meg128(outline%get_west(), outline%get_east())
    numlat = get_siz_lat_meg128(outline%get_south(), outline%get_north())
@@ -104,7 +111,7 @@ program main
 
 
    k = 1
-   do j = numlat, 1, -1
+   do j = 1, numlat
       do i = 1, numlon
          if (distri_logical(i,j)) then
             file_list_local(k) = adjustl(file_list(i,j))
@@ -192,7 +199,7 @@ program main
 
          deallocate(buff_single%data)
 
-         print '(a, a, i5, a, i5, a)', trim(tiles(k)%get_path()), ': loaded. (', k, '/', n_jobs, ')'
+         print '(i3, a, a, i5, a, i5, a)',thisis, trim(tiles(k)%get_path()), ': loaded. (', k, '/', n_jobs, ')'
 
       end do
    end block sync_io
@@ -329,26 +336,25 @@ program main
 
       k = 1
       do j = 1, numlat
-
-
          do i = 1, numlon
             if (distri_logical(i,j)) then
 
                if (is_on_west_edge(i,j) .and. is_on_east_edge(i,j)) then
                
-                  start_nc(1) = (i-1)*local_nx+1
+                  start_nc(1) = 1
                   count_nc(1) = idx_east_local-idx_west_local+1
 
                else if (is_on_west_edge(i,j)) then
 
-                  start_nc(1) = (i-1)*local_nx+1
+                  start_nc(1) = 1
                   count_nc(1) = local_nx-idx_west_global+1
 
                else if (is_on_east_edge(i,j)) then
-                  start_nc(1) = (i-1)*local_nx-idx_west_global+2
+                  start_nc(1) = 1 + (local_nx - idx_west_global + 1) + (i-2)*local_nx
                   count_nc(1) = idx_east_local
+
                else 
-                  start_nc(1) = (i-1)*local_nx-idx_west_global+2
+                  start_nc(1) = 1 + (local_nx - idx_west_global + 1) + (i-2)*local_nx
                   count_nc(1) = local_nx
 
                end if
@@ -360,34 +366,37 @@ program main
 
                   
                else if (is_on_south_edge(i,j)) then
-                  print *, thisis, 'south edge'
+                  ! print *, thisis, 'south edge'
                   start_nc(2) = 1
                   count_nc(2) = local_ny - idx_south_global +1
 
 
                else if (is_on_north_edge(i,j)) then
-                  print *, thisis, 'north edge'
+                  ! print *, thisis, 'north edge'
                   start_nc(2) = 1 + (local_ny - idx_south_global +1) + (j-2)*local_ny
                   count_nc(2) = idx_north_local
                   if (is_north_trimed) count_nc(2) = count_nc(2)
 
                else
-                  print *, thisis, 'middle'
+                  ! print *, thisis, 'middle'
                   start_nc(2) = 1 + (local_ny-idx_south_global +1) + (j-2)*local_ny
                   count_nc(2) = local_ny
                end if
    
-               print *, thisis, 'start_nc: ', start_nc
-               print *, thisis, 'count_nc: ', count_nc
+               print *, thisis, k, 'start_nc: ', start_nc(1)
+               print *, thisis, k, 'count_nc: ', count_nc(1)
 
-               
+               ! if (thisis == 1) then
+               !    tiles(1)%shrinked_data(:,:) = 30000_int16
+               !    tiles(2)%shrinked_data(:,:) = 30000_int16
+               !    tiles(3)%shrinked_data(:,:) = 30000_int16
+               ! end if
 
                call nc%put_elev(tiles(k)%shrinked_data, start=start_nc, count=count_nc)
                k = k + 1
 
             end if
          end do
-
       end do
 
       ! put_varはブロッキングするため、余りのプロセスでは空の書き込み命令を呼びだす。

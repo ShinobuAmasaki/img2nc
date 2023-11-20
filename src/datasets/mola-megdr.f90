@@ -194,7 +194,7 @@ contains
 
       character(len=22) :: code
       integer(int32) :: siz_lon, siz_lat
-      integer(int32) :: i, j, north, west
+      integer(int32) :: i, j, north, west, jj
 
       integer(int32) :: e_west, e_east, e_south, e_north
 
@@ -211,10 +211,12 @@ contains
 
          north = e_north - (j-1)*44
 
+         jj = siz_lat - j + 1
 
          do i = 1, siz_lon
 
             west = e_west + (i-1)*90
+
 
             if (present(kind_arg)) then
                call create_data_name_mola(west, north, code, kind_arg)
@@ -222,7 +224,7 @@ contains
                call create_data_name_mola(west, north, code)
             end if
 
-            list(i, j) = trim(data_root)//'/'//'meg128'//'/'//code
+            list(i, jj) = trim(data_root)//'/'//'meg128'//'/'//code
          
          end do
       end do
@@ -238,7 +240,7 @@ contains
       type(boundary), intent(in) :: outline
 
       integer :: petot_max    ! the maximum value of processor emement total 
-      integer :: num_i, num_j, i, j
+      integer :: num_i, num_j, i, j, k
 
       num_i = get_siz_lon_meg128(outline%get_west(), outline%get_east())
       num_j = get_siz_lat_meg128(outline%get_south(), outline%get_north())
