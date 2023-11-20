@@ -19,7 +19,7 @@ program main
 
    character(len=MAX_PATH_LEN) :: filename, data_dir
    character(len=MAX_NAME_LEN) :: outnc
-   character(len=15) :: range
+   character(len=MAX_RANGE_LEN) :: range
    type(boundary) :: edge
    integer(int32) :: coarse
 
