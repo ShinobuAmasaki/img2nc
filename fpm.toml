@@ -21,5 +21,5 @@ name = 'img2nc-mola'
 main = 'main-mola.f90'
 
 [[executable]]
-name = 'mola-trim'
-main = 'main-mola-trim.f90'
+name = 'img2nc'
+main = 'main-sldem2013.f90'

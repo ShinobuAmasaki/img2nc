@@ -162,14 +162,16 @@ GMTの使い方については [GMT Documentation](https://docs.generic-mapping-
 ## Future works
 将来、以下の機能を実装する予定である。
 
-- ✅粗視化処理（バージョン2）
-- ✅Intelコンパイラによるビルド（バージョン2）
-- ✅並列処理（バージョン2）
-- ✅出力の並列化（バージョン3）
-- ✅入力のより多い並列化（バージョン3）
-- ✅負の経度指定（バージョン3）
+- ✅ 粗視化処理（バージョン2）
+- 一度当たりの解像度を指定するオプション
+- ✅ Intelコンパイラによるビルド（バージョン2）
+- ✅ 並列処理（バージョン2）
+- ✅ 出力の並列化（バージョン3）
+- ✅ 入力のより多い並列化（バージョン3）
+- ✅ 負の経度指定（バージョン3）
 - 非同期入出力（FortranのAsynchronous I/O）
-- MOLA(火星のDEM)のデータ処理
+- ✅ MOLA(火星のDEM)のデータ処理（バージョン3.1）
+- ✅ トリミング（MOLAのみ、バージョン3.1）
 
 
 [^1]: [Institute of Space and Astronautical Science, Japan Aerospace Exploration Agency - 宇宙航空研究開発機構　宇宙科学研究所](https://www.isas.jaxa.jp/)

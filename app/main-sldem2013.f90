@@ -28,7 +28,7 @@ program main
    real(real64), allocatable :: lon(:), lat(:)
 
    ! Input/Output
-   integer :: uni, ios, howmany
+   integer :: uni, ios
 
    ! Magic parameters
    integer(int32) :: nx

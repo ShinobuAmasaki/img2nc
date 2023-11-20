@@ -151,14 +151,16 @@ See [GMT Documentation](https://docs.generic-mapping-tools.org/latest/) on how t
 ## Future works
 In the future, we would like to implement the following feature:
 
-- ✅Coarse vision
-- ✅Support Intel Fortran Compiler
-- ✅Parallel processing
-- ✅Parallel I/O (MPI I/O based)
-- ✅High-degree of Parallelization
-- ✅Negative Longitude
+- ✅ Coarse vision
+- Specifying Resolution per Degree
+- ✅ Support Intel Fortran Compiler
+- ✅ Parallel processing
+- ✅ Parallel I/O (MPI I/O based)
+- ✅ High Degree of Parallelization
+- ✅ Negative Longitude
 - Asynchronous I/O
-- Support MOLA data (Mars DEM)
+- ✅ Support MOLA data (Mars DEM)
+- ✅ Trimming (for MOLA only)
 
 [^1]: Digital Elevation Model（数値標高地図）
 [^2]: [Institute of Space and Astronautical Science, Japan Aerospace Exploration Agency - 宇宙航空研究開発機構　宇宙科学研究所](https://www.isas.jaxa.jp/)
