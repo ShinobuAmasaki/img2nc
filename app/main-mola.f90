@@ -104,7 +104,7 @@ program main
 
 
    k = 1
-   do j = 1, numlat
+   do j = numlat, 1, -1
       do i = 1, numlon
          if (distri_logical(i,j)) then
             file_list_local(k) = adjustl(file_list(i,j))
@@ -215,21 +215,22 @@ program main
       west = dble(outline%get_west())
       south = dble(outline%get_south())
 
+
       do concurrent(i = 1:global_nx)
          lon(i) = dble(i-1)*step_lon + west + offset_x
       end do
 
       do concurrent(j = 1:global_ny)
-         lat(j) = dble(j)*step_lat + south + offset_y
+         lat(j) = dble(j)*step_lat + south + offset_y 
       end do
+
+      if (edge%get_south() == 0) lat(1) = step_lat + offset_y
+
       
    end block lonlat_prepare
 
-  
-   print *, size(tiles(1)%shrinked_data, dim=1), size(tiles(1)%shrinked_data, dim=2)   
+   
    triming: block
-
-      
 
       do i = 1, global_nx
          if (edge%get_west() <= lon(i)) then
@@ -245,8 +246,8 @@ program main
          end if
       end do
 
-      do j = global_ny, 1, -1 
-         if (lat(j) <= edge%get_south()) then
+      do j = 1, global_ny 
+         if (edge%get_south() <= lat(j) ) then
             idx_south_global = j
             exit
          end if
@@ -288,10 +289,11 @@ program main
                   call triming_south_north(tiles(k)%shrinked_data, idx_south_local, idx_north_local)
                
                else if (is_on_south_edge(i,j)) then
-                  call triming_south(tiles(k)%shrinked_data, idx_south_local)
+                  call triming_south_north(tiles(k)%shrinked_data, idx_south_local, size(tiles(k)%shrinked_data, dim=2))
 
                else if (is_on_north_edge(i,j)) then
-                  call triming_north(tiles(k)%shrinked_data, idx_north_local)
+                  ! call triming_north(tiles(k)%shrinked_data, idx_north_local)
+                  call triming_south_north(tiles(k)%shrinked_data, 1, idx_north_local)
                end if
 
                k = k + 1
@@ -299,23 +301,36 @@ program main
          end do 
       end do
 
-
+      call resize_longitude(lon, idx_west_global, idx_east_global)
+      call resize_latitude(lat, idx_south_global, idx_north_global)
 
    end block triming
 
 
-   call nc%init(outnc, [idx_east_global-idx_west_global+1, idx_north_global-idx_south_global+1])
+   call nc%init(outnc, [size(lon), size(lat)])
    call mpi_barrier(mpi_comm_world, ierr)
 
-   call nc%put_lonlat(lon(idx_west_global:idx_east_global), lat(idx_south_global:idx_north_global), &
-                        count=[idx_east_global-idx_west_global+1, idx_north_global-idx_south_global+1])
+   call nc%put_lonlat(lon, lat, count=[size(lon), size(lat)])
+
+   print *, thisis, distri_logical
 
 
    parallel_io: block
-      integer ::  n 
-      integer :: start_nc(2), count_nc(2)
+      integer ::  n
+      integer :: start_nc(2), count_nc(2) !, global_south_start
+      logical :: is_south_trimed, is_north_trimed
+
+      is_south_trimed = outline%get_south() /= edge%get_south()
+      is_north_trimed = outline%get_north() /= edge%get_north()
+
+      ! print *, 'is_south_trimed', is_south_trimed
+      ! print *, 'is_north_trimed', is_north_trimed
+
+
       k = 1
       do j = 1, numlat
+
+
          do i = 1, numlon
             if (distri_logical(i,j)) then
 
@@ -340,27 +355,39 @@ program main
 
 
                if (is_on_south_edge(i,j) .and. is_on_north_edge(i,j)) then
-                  start_nc(2) = (numlat-j)*local_ny+1
+                  start_nc(2) = 1
                   count_nc(2) = idx_north_local - idx_south_local + 1
-               
+
+                  
                else if (is_on_south_edge(i,j)) then
-                  start_nc(2) = (numlat-j)*local_ny+1
-                  count_nc(2) = local_ny - idx_south_global+1
-               
+                  print *, thisis, 'south edge'
+                  start_nc(2) = 1
+                  count_nc(2) = local_ny - idx_south_global +1
+
+
                else if (is_on_north_edge(i,j)) then
-                  start_nc(2) = (numlat-j)*local_ny - idx_south_global +2
+                  print *, thisis, 'north edge'
+                  start_nc(2) = 1 + (local_ny - idx_south_global +1) + (j-2)*local_ny
                   count_nc(2) = idx_north_local
+                  if (is_north_trimed) count_nc(2) = count_nc(2)
+
                else
-                  start_nc(2) = (numlat-j)*local_ny - idx_south_global +2
+                  print *, thisis, 'middle'
+                  start_nc(2) = 1 + (local_ny-idx_south_global +1) + (j-2)*local_ny
                   count_nc(2) = local_ny
                end if
    
+               print *, thisis, 'start_nc: ', start_nc
+               print *, thisis, 'count_nc: ', count_nc
+
+               
 
                call nc%put_elev(tiles(k)%shrinked_data, start=start_nc, count=count_nc)
                k = k + 1
 
             end if
          end do
+
       end do
 
       ! put_varはブロッキングするため、余りのプロセスでは空の書き込み命令を呼びだす。
@@ -397,7 +424,43 @@ contains
       call edge%set_north(90)
 
    end subroutine default
-      
+
+   subroutine resize_longitude(lon, idx_west, idx_east)
+      implicit none
+      real(real64), allocatable, intent(inout) :: lon(:)
+      integer(int32), intent(in) :: idx_west, idx_east
+      real(real64), allocatable :: buf(:)
+
+      if (idx_west == 0 .and. idx_east == global_nx) return
+
+      allocate(buf(idx_east-idx_west+1))
+      buf(:) = lon(idx_west:idx_east)
+
+      deallocate(lon)
+      allocate(lon(idx_east-idx_west+1))
+
+      lon(:) = buf(:)
+
+   end subroutine
+
+   subroutine resize_latitude(lat, idx_south, idx_north)
+      implicit none
+      real(real64), allocatable, intent(inout) :: lat(:)
+      integer(int32), intent(in) :: idx_south, idx_north
+      real(real64), allocatable :: buf(:)
+
+      if (idx_south == 0 .and. idx_north == global_ny) return
+
+      allocate(buf(idx_north-idx_south+1))
+      buf(:) = lat(idx_south:idx_north)
+
+      deallocate(lat)
+      allocate(lat(idx_south:idx_north))
+
+      lat(:) = buf(:)
+   
+   end subroutine resize_latitude
+
 
    subroutine set_is_on_west_edge(is_on_west_edge)
       implicit none
@@ -428,7 +491,9 @@ contains
 
       is_on_south_edge(:, :) = .false.
 
-      is_on_south_edge(:, size(is_on_south_edge, dim=2)) = .true.
+       ! 配列の上が南の順番になっているので、このマスクは最初の行が南端
+      is_on_south_edge(:, 1) = .true.
+
    end subroutine set_is_on_south_edge
 
 
@@ -439,7 +504,9 @@ contains
 
       is_on_north_edge(:, :) = .false.
 
-      is_on_north_edge(:, 1) = .true.
+      ! 配列の上が南の順番になっているので、このマスクは最後の行が北端
+      is_on_north_edge(:, size(is_on_north_edge, dim=2)) = .true.
+
    end subroutine set_is_on_north_edge
 
     
@@ -542,7 +609,7 @@ contains
 
       allocate(buff(nx, ny-idx_s+1))
 
-      buff(:, :) = array(:, idx_s:ny)
+      buff(:, :) = array(:, 1:ny-idx_s+1)
 
       deallocate(array)
       allocate(array(nx, ny-idx_s+1))
