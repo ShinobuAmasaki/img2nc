@@ -2,7 +2,7 @@
 download_lbl() {
    file="$1.lbl"
    url="${REPOS_ROOT}/${file}"
-   dir="${DATA_ROOT}/"
+   dir="${DATA_ROOT}/meg128"
 
    if [ -e "$dir/$file" ]; then
       echo "  $file: Already exists."
@@ -21,7 +21,7 @@ download_img() {
    #URLの生成
    url="${REPOS_ROOT}/${file}"
    #
-   dir="${DATA_ROOT}/"
+   dir="${DATA_ROOT}/meg128"
 
    if [ -e "$dir/$file" ]; then
       echo "  $file: Already exists."
@@ -51,7 +51,7 @@ download_loop() {
    #リストファイルにヘッダー情報を書き込む
    # echo "`expr $east - $west`  `expr $north - $south`" > $code_list
 
-   for kind in c r t ; do 
+   for kind in r t ; do 
       #西から東へループする。
       for i in 000 090 180 270 ; do 
 
