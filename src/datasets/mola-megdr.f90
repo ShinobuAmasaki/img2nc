@@ -12,6 +12,8 @@ module mola_megdr
    public :: get_siz_lon_meg128
    public :: get_siz_lat_meg128
 
+   integer(int32), parameter, public :: MOLA_MEG128_PPD_MAX=128
+
    interface outline_mola
       procedure :: outline__mola_meg128
    end interface

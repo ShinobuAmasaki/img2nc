@@ -3,6 +3,8 @@ module sldem2013
    use :: base_m
    implicit none
 
+   integer(int32), parameter, public :: SLDEM2013_PPD_MAX=4096
+
    interface create_data_name_sldem2013
       module procedure :: create_data_name_sldem2013
    end interface create_data_name_sldem2013

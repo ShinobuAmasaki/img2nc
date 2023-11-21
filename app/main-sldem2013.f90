@@ -20,6 +20,9 @@ program main
    character(len=MAX_PATH_LEN) :: filename, data_dir
    character(len=MAX_NAME_LEN) :: outnc
    character(len=MAX_RANGE_LEN) :: range
+
+   character(8), parameter :: DEFAULT_OUT = './out.nc'
+
    type(boundary) :: edge
    integer(int32) :: coarse
 
@@ -62,8 +65,9 @@ program main
    call default(data_dir, outnc, coarse, edge)
 
    ! Read parameter from command line arguments. 
-   call preprocess(data_dir, outnc, range, coarse, edge)
+   call preprocess(data_dir, outnc, range, coarse, edge, resolution_default=SLDEM2013_PPD_MAX/16, ppd_max=SLDEM2013_PPD_MAX)
    
+   if (trim(outnc) == '') outnc = DEFAULT_OUT
 
    ! 入力処理用の名簿を作成する。
    call allocate_lists(edge, file_list, distri_1d, distri_2d, distri_logical)
@@ -177,6 +181,7 @@ program main
    call mpi_barrier(mpi_comm_world, ierr)
 
 
+
    lonlat_prepare: block 
       integer :: i, j
       real(real64) :: south, west
@@ -186,26 +191,25 @@ program main
          offset_y = -step_lat/2d0
       end if
 
-      if (isIm1) then
-         allocate(lon(global_nx))
-         allocate(lat(global_ny))
+   
+      allocate(lon(global_nx))
+      allocate(lat(global_ny))
 
-         west = dble(edge%get_west())
-         south = dble(edge%get_south())
+      west = dble(edge%get_west())
+      south = dble(edge%get_south())
 
-         do concurrent(i = 1:global_nx)
-            lon(i) = dble(i-1)*step_lon + west + offset_x
-         end do
+      do concurrent(i = 1:global_nx)
+         lon(i) = dble(i-1)*step_lon + west + offset_x
+      end do
 
-         do concurrent(j = 1:global_ny)
-            lat(j) = dble(j)*step_lat + south + offset_y
-         end do
-      end if
+      do concurrent(j = 1:global_ny)
+         lat(j) = dble(j)*step_lat + south + offset_y
+      end do
+      
    end block lonlat_prepare
 
   
    call nc%put_lonlat(lon, lat, count=[global_nx, global_ny])
-
 
    parallel_io: block
       integer ::  n 
@@ -254,7 +258,7 @@ contains
       integer(int32) :: coarse
 
       coarse = 16
-      outnc = './out.nc'
+      outnc = DEFAULT_OUT
       data_dir = './sldem2013'
 
       call edge%set_east(4)

@@ -18,23 +18,26 @@ module preprocess_m
    character(len=5) :: d_flag_l = '--dir'       ! data dir
    character(len=7) :: r_flag_l = '--range'     ! range
    character(len=8) :: c_flag_l = '--coarse'    ! coarse
+   character(len=7) :: p_flag_l = '--pixel'     ! pixels per degree 
    character(len=2) :: h_flag_s = '-h'
    character(len=2) :: o_flag_s = '-o'
    character(len=2) :: d_flag_s = '-d'
    character(len=2) :: r_flag_s = '-r'
    character(len=2) :: c_flag_s = '-c'
-   integer(int32) :: coarse_default = 16
+   character(len=2) :: p_flag_s = '-p'
+   ! integer(int32) :: coarse_default = 16
 
 contains
 
-   subroutine preprocess (data_dir, outnc, range, coarse, edge )
+   subroutine preprocess (data_dir, outnc, range, coarse, edge, resolution_default, ppd_max )
       implicit none
       character(*),   intent(out) :: data_dir, outnc
       character(MAX_RANGE_LEN),  intent(out) :: range
       integer(int32), intent(out) :: coarse
       type(boundary), intent(out)   :: edge
+      integer(int32), intent(in) :: resolution_default, ppd_max
       
-      call get_value_from_args(data_dir, outnc, range, coarse)
+      call get_value_from_args(data_dir, outnc, range, coarse, resolution_default, ppd_max)
       call validate_range(range, edge)
 
 
@@ -46,11 +49,13 @@ contains
    end subroutine
 
 
-   subroutine get_value_from_args (data_dir, outnc, range, coarse)
+   subroutine get_value_from_args (data_dir, outnc, range, coarse, resolution_default, ppd_max)
       implicit none
       character(*),   intent(out) :: data_dir, outnc
       character(MAX_RANGE_LEN),  intent(out) :: range
       integer(int32), intent(out) :: coarse
+      integer(int32), intent(in) :: resolution_default
+      integer(int32), intent(in) ::  ppd_max  ! the maximum value of pixels per degree
       integer :: ios
       
       character(4) :: coarse_char
@@ -116,11 +121,33 @@ contains
 
          read(coarse_char, *, iostat=ios) coarse
          if (ios /= 0) then
-            write(stderr, *) "Invalid COARSE value."
-            write(stderr, *) "===> Use default value: 16"
-            coarse = coarse_default
+            coarse = resolution_default / ppd_max
+            if (isIm1) write(stderr, *) "Invalid COARSE value."
+            if (isIm1) write(stderr, *) "===> Use default value: ", coarse
          end if
 
+      else if ((wrap(p_flag_l) .in. arg_whole) .or. (wrap(p_flag_s) .in. arg_whole)) then
+         block
+            character(:), allocatable :: resolution_char
+            integer(int32) :: resolution
+
+            index = get_flag_index(p_flag_l, p_flag_s, arg) + 1
+            resolution_char = trim(adjustl( arg(index)%v ))
+
+            read(resolution_char, *, iostat=ios) resolution
+            if (ios /= 0) then
+               if (isIm1) write(stderr, *) "[Error] Invalid RESOLUTION value"
+               if (isIm1) write(stderr, *) "===> Use default value: ", resolution_default
+               resolution = resolution_default
+            end if
+
+            coarse = ppd_max / resolution
+         end block
+      
+      else
+         if (isIm1) write(stderr, *) "[Info] Use default RESOLUTION value: ", resolution_default
+
+         coarse = ppd_max / resolution_default
       end if
 
       outnc = trim(adjustl(outnc_buff))

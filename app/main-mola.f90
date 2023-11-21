@@ -56,7 +56,7 @@ program main
    
    call default(data_dir, outnc, coarse, edge)
 
-   call preprocess(data_dir, outnc, range, coarse, edge)
+   call preprocess(data_dir, outnc, range, coarse, edge, resolution_default=MOLA_MEG128_PPD_MAX, ppd_max=MOLA_MEG128_PPD_MAX)
 
 
    outline = outline_mola(edge)
