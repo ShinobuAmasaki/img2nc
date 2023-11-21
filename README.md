@@ -6,6 +6,8 @@ For those who want to draw a topographic map of the Moon.
 
 ![lambart](https://user-images.githubusercontent.com/100006043/174430799-5b3f654a-1a47-48d0-ac9e-32976f05390c.png)
 
+![Mars-globe](https://github.com/ShinobuAmasaki/img2nc/blob/d64e171d2bb1ebde617e00c03fc34523bf31dc6e/mars-global.png?raw=true)
+
 ## Abstract
 This software has the following roles to:
 

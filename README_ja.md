@@ -177,7 +177,7 @@ scriptディレクトリの`mars-global-mercator.sh`を実行すると、GMTを�
 ./script/mars-global-mercator.sh
 ```
 
-![Mars-global](https://github.com/ShinobuAmasaki/img2nc/blob/d64e171d2bb1ebde617e00c03fc34523bf31dc6e/mars-global.png?raw=true)
+![Mars-globe](https://github.com/ShinobuAmasaki/img2nc/blob/d64e171d2bb1ebde617e00c03fc34523bf31dc6e/mars-global.png?raw=true)
 
 
 
