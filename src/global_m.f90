@@ -6,6 +6,7 @@ module global_m
    integer(int32) :: petot, rank, thisis
    logical :: isIm1
 
+
 contains
 
    subroutine mpi_initialize(ierr)

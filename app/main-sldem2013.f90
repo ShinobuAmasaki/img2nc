@@ -37,8 +37,7 @@ program main
    integer(int32) :: nx
    integer(int32) :: ny
 
-   integer(int32) :: global_nx
-   integer(int32) :: global_ny
+   integer(int32) :: global_nx, global_ny
    integer(int32) :: local_nx
    integer(int32) :: local_ny
 

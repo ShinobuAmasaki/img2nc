@@ -12,6 +12,20 @@ module mola_megdr
    public :: get_siz_lon_meg128
    public :: get_siz_lat_meg128
 
+   ! Procedures for trimming
+   public :: resize_longitude
+   public :: resize_latitude
+   public :: set_is_on_west_edge
+   public :: set_is_on_east_edge
+   public :: set_is_on_south_edge
+   public :: set_is_on_north_edge
+   public :: trimming_west_east
+   public :: trimming_west
+   public :: trimming_east
+   public :: trimming_south_north
+   public :: trimming_south
+   public :: trimming_north
+
    integer(int32), parameter, public :: MOLA_MEG128_PPD_MAX=128
 
    interface outline_mola
@@ -345,6 +359,225 @@ contains
       res = most_north - most_south
       
    end function get_siz_lat_meg128
+
+
+   subroutine resize_longitude(lon, idx_west, idx_east, global_nx)
+      implicit none
+      real(real64), allocatable, intent(inout) :: lon(:)
+      integer(int32), intent(in) :: idx_west, idx_east
+      integer(int32), intent(in) :: global_nx
+      real(real64), allocatable :: buf(:)
+
+      if (idx_west == 0 .and. idx_east == global_nx) return
+
+      allocate(buf(idx_east-idx_west+1))
+      buf(:) = lon(idx_west:idx_east)
+
+      deallocate(lon)
+      allocate(lon(idx_east-idx_west+1))
+
+      lon(:) = buf(:)
+
+   end subroutine
+
+   subroutine resize_latitude(lat, idx_south, idx_north, global_ny)
+      implicit none
+      real(real64), allocatable, intent(inout) :: lat(:)
+      integer(int32), intent(in) :: idx_south, idx_north
+      integer(int32), intent(in) :: global_ny
+      real(real64), allocatable :: buf(:)
+
+
+      if (idx_south == 0 .and. idx_north == global_ny) return
+
+      allocate(buf(idx_north-idx_south+1))
+      buf(:) = lat(idx_south:idx_north)
+
+      deallocate(lat)
+      allocate(lat(idx_south:idx_north))
+
+      lat(:) = buf(:)
+   
+   end subroutine resize_latitude
+
+
+   subroutine set_is_on_west_edge(is_on_west_edge)
+      implicit none
+      logical, intent(out) :: is_on_west_edge(:,:)
+
+      is_on_west_edge(:, :) = .false.
+
+      is_on_west_edge(1, :) = .true.
+
+   end subroutine set_is_on_west_edge
+
+
+   subroutine set_is_on_east_edge(is_on_east_edge)
+      implicit none
+      logical, intent(out) :: is_on_east_edge(:,:)
+
+      is_on_east_edge(:, :) = .false.
+
+      is_on_east_edge(size(is_on_east_edge, dim=1), :) = .true.
+
+   end subroutine set_is_on_east_edge
+
+
+   subroutine set_is_on_south_edge(is_on_south_edge)
+      implicit none
+      
+      logical, intent(out) :: is_on_south_edge(:,:)
+
+      is_on_south_edge(:, :) = .false.
+
+       ! 配列の上が南の順番になっているので、このマスクは最初の行が南端
+      is_on_south_edge(:, 1) = .true.
+
+   end subroutine set_is_on_south_edge
+
+
+   subroutine set_is_on_north_edge(is_on_north_edge)
+      implicit none
+      
+      logical, intent(out) :: is_on_north_edge(:, :)
+
+      is_on_north_edge(:, :) = .false.
+
+      ! 配列の上が南の順番になっているので、このマスクは最後の行が北端
+      is_on_north_edge(:, size(is_on_north_edge, dim=2)) = .true.
+
+   end subroutine set_is_on_north_edge
+
+    
+   subroutine trimming_west_east(array, idx_w, idx_e)
+      implicit none
+      integer(int16), allocatable, intent(inout) :: array(:,:)
+      integer(int32), intent(in) :: idx_w, idx_e
+
+      integer(int16), allocatable :: buff(:, :)
+      integer(int32) :: ny
+
+      ny = size(array, dim=2)
+
+      allocate(buff(idx_e-idx_w+1, ny))
+
+      buff(:,:) = array(idx_w:idx_e, :)
+
+      deallocate(array)
+      allocate(array(idx_e-idx_w+1, ny))
+      array(:,:) = buff(:, :)
+   end subroutine trimming_west_east
+
+
+   subroutine trimming_west (array, idx_w)
+      implicit none
+      integer(int16), allocatable, intent(inout) :: array(:, :)
+      integer(int32), intent(in) :: idx_w
+
+      integer(int16), allocatable :: buff(:, :)
+      integer(int32) :: nx, ny
+
+      nx = size(array, dim=1)
+      ny = size(array, dim=2)
+
+      allocate(buff(nx-idx_w+1, ny))
+
+      buff(:, :) = array(idx_w:nx, :)
+
+      deallocate(array)
+      allocate(array(nx-idx_w+1, ny))
+
+      array(:,:) = buff(:, :)
+
+   end subroutine trimming_west
+
+
+   subroutine trimming_east (array, idx_e)
+      implicit none
+      integer(int16), allocatable, intent(inout) :: array(:,:)
+      integer(int32), intent(in) :: idx_e
+
+      integer(int16), allocatable :: buff(:,:)
+      integer(int32) :: ny
+
+      ny = size(array, dim=2)
+
+      allocate(buff(idx_e, ny))
+
+      buff(:,:) = array(1:idx_e, :)
+
+      deallocate(array)
+      allocate(array(idx_e, ny))
+
+      array(:,:) = buff(:,:)
+   end subroutine trimming_east 
+
+   
+   subroutine trimming_south_north(array, idx_s, idx_n)
+      implicit none
+      integer(int16), allocatable, intent(inout) :: array(:, :)
+      integer(int32), intent(in) :: idx_s, idx_n
+
+      integer(int16), allocatable :: buff(:, :)
+      integer(int32) :: nx
+
+      nx = size(array, dim=1)
+
+      allocate(buff(nx, idx_n-idx_s+1))
+
+      buff(:,:) = array(:, idx_s:idx_n)
+
+      deallocate(array)
+      allocate(array(nx, idx_n-idx_s+1))
+
+      array(:, :) = buff(:, :)
+
+   end subroutine trimming_south_north 
+
+
+   subroutine trimming_south(array, idx_s)
+      implicit none
+      integer(int16), allocatable, intent(inout) :: array(:,:)
+      integer(int32), intent(in) :: idx_s
+
+      integer(int16), allocatable :: buff(:,:)
+      integer(int32) :: nx, ny
+
+      nx = size(array, dim=1)
+      ny = size(array, dim=2)
+
+      allocate(buff(nx, ny-idx_s+1))
+
+      buff(:, :) = array(:, 1:ny-idx_s+1)
+
+      deallocate(array)
+      allocate(array(nx, ny-idx_s+1))
+
+      array(:,:) = buff(:,:)
+
+   end subroutine trimming_south
+
+
+   subroutine trimming_north(array, idx_n)
+      implicit none
+      integer(int16), allocatable, intent(inout) :: array(:,:)
+      integer(int32), intent(in) :: idx_n
+
+      integer(int16), allocatable :: buff(:,:)
+      integer(int32) :: nx, ny
+
+      nx = size(array, dim=1)
+
+      allocate(buff(nx, idx_n))
+
+      buff(:, :) = array(:, 1:idx_n)
+
+      deallocate(array)
+      allocate(array(nx, idx_n))
+
+      array(:,:) = buff(:,:)
+
+   end subroutine trimming_north
 
 
 end module mola_megdr

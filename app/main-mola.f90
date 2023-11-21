@@ -14,6 +14,8 @@ program main
    character(len=MAX_NAME_LEN) :: outnc
    character(len=MAX_RANGE_LEN) :: range
 
+   character(len=MAX_NAME_LEN) :: DEFAULT_OUT = './mola.nc'
+
    integer(int32), allocatable :: distri_1d(:), distri_2d(:,:)
    logical, allocatable :: distri_logical(:, :)
 
@@ -21,12 +23,13 @@ program main
    character(len=MAX_PATH_LEN), allocatable :: file_list_local(:)
    
    type(boundary) :: edge, outline
-   integer(int32) :: coarse !, resolution
+   integer(int32) :: coarse
 
    integer(int32) :: numlon, numlat
    integer(int32) :: nx, ny
    integer(int32) :: local_nx, local_ny
    integer(int32) :: global_nx, global_ny
+
    real(real64) :: step_lon, step_lat
    real(real64), allocatable :: lon(:), lat(:)
    real(real64) :: offset_x, offset_y
@@ -54,13 +57,15 @@ program main
 
    call mpi_initialize(ierr)
    
-   call default(data_dir, outnc, coarse, edge)
+  
 
    call preprocess(data_dir, outnc, range, coarse, edge, resolution_default=MOLA_MEG128_PPD_MAX, ppd_max=MOLA_MEG128_PPD_MAX)
 
 
    outline = outline_mola(edge)
 
+   if (trim(outnc) == '') outnc = DEFAULT_OUT
+   call default(data_dir, outnc)
 
    call allocate_lists(outline, file_list, distri_1d, distri_2d, distri_logical)
 
@@ -72,7 +77,7 @@ program main
    numlon = get_siz_lon_meg128(outline%get_west(), outline%get_east())
    numlat = get_siz_lat_meg128(outline%get_south(), outline%get_north())
 
-   triming_prepare: block
+   trimming_prepare: block
       allocate(is_on_west_edge(numlon, numlat))
       allocate(is_on_east_edge(numlon, numlat))
       allocate(is_on_south_edge(numlon, numlat))
@@ -83,7 +88,7 @@ program main
       call set_is_on_south_edge(is_on_south_edge)
       call set_is_on_north_edge(is_on_north_edge)
 
-   end block triming_prepare
+   end block trimming_prepare
 
 
    do j = 1, size(file_list, dim=2)
@@ -230,7 +235,7 @@ program main
    end block lonlat_prepare
 
    
-   triming: block
+   trimming: block
 
       do i = 1, global_nx
          if (edge%get_west() <= lon(i)) then
@@ -275,25 +280,25 @@ program main
             if (distri_logical(i, j)) then
               
                if (is_on_west_edge(i,j) .and. is_on_east_edge(i,j)) then
-                  call triming_west_east(tiles(k)%shrinked_data, idx_west_local, idx_east_local)
+                  call trimming_west_east(tiles(k)%shrinked_data, idx_west_local, idx_east_local)
                
                else if (is_on_west_edge(i,j)) then
-                  call triming_west(tiles(k)%shrinked_data, idx_west_local)
+                  call trimming_west(tiles(k)%shrinked_data, idx_west_local)
 
                else if (is_on_east_edge(i,j)) then
-                  call triming_east(tiles(k)%shrinked_data, idx_east_local)    
+                  call trimming_east(tiles(k)%shrinked_data, idx_east_local)    
                end if
 
 
                if (is_on_south_edge(i,j) .and. is_on_north_edge(i,j)) then
-                  call triming_south_north(tiles(k)%shrinked_data, idx_south_local, idx_north_local)
+                  call trimming_south_north(tiles(k)%shrinked_data, idx_south_local, idx_north_local)
                
                else if (is_on_south_edge(i,j)) then
-                  call triming_south_north(tiles(k)%shrinked_data, idx_south_local, size(tiles(k)%shrinked_data, dim=2))
+                  call trimming_south_north(tiles(k)%shrinked_data, idx_south_local, size(tiles(k)%shrinked_data, dim=2))
 
                else if (is_on_north_edge(i,j)) then
-                  ! call triming_north(tiles(k)%shrinked_data, idx_north_local)
-                  call triming_south_north(tiles(k)%shrinked_data, 1, idx_north_local)
+                  ! call trimming_north(tiles(k)%shrinked_data, idx_north_local)
+                  call trimming_south_north(tiles(k)%shrinked_data, 1, idx_north_local)
                end if
 
                k = k + 1
@@ -301,10 +306,10 @@ program main
          end do 
       end do
 
-      call resize_longitude(lon, idx_west_global, idx_east_global)
-      call resize_latitude(lat, idx_south_global, idx_north_global)
+      call resize_longitude(lon, idx_west_global, idx_east_global, global_nx)
+      call resize_latitude(lat, idx_south_global, idx_north_global, global_ny)
 
-   end block triming
+   end block trimming
 
 
    call nc%init(outnc, [size(lon), size(lat)])
@@ -394,268 +399,14 @@ program main
 
 contains
 
-   subroutine default(data_dir, outnc, coarse, edge)
+   subroutine default(data_dir, outnc)
       implicit none
       character(*), intent(inout) :: data_dir, outnc
-      type(boundary), intent(out) :: edge
-      integer(int32) ::  coarse
 
-      coarse = 16
-      outnc = './mola.nc'
-      data_dir = './mola-megdr'
-
-      call edge%set_west(-180)
-      call edge%set_east(180)
-      call edge%set_south(-90)
-      call edge%set_north(90)
+      if (trim(outnc) == '')    outnc = DEFAULT_OUT
+      if (trim(data_dir) == '') data_dir = './mola-megdr'
 
    end subroutine default
-
-   subroutine resize_longitude(lon, idx_west, idx_east)
-      implicit none
-      real(real64), allocatable, intent(inout) :: lon(:)
-      integer(int32), intent(in) :: idx_west, idx_east
-      real(real64), allocatable :: buf(:)
-
-      if (idx_west == 0 .and. idx_east == global_nx) return
-
-      allocate(buf(idx_east-idx_west+1))
-      buf(:) = lon(idx_west:idx_east)
-
-      deallocate(lon)
-      allocate(lon(idx_east-idx_west+1))
-
-      lon(:) = buf(:)
-
-   end subroutine
-
-   subroutine resize_latitude(lat, idx_south, idx_north)
-      implicit none
-      real(real64), allocatable, intent(inout) :: lat(:)
-      integer(int32), intent(in) :: idx_south, idx_north
-      real(real64), allocatable :: buf(:)
-
-      if (idx_south == 0 .and. idx_north == global_ny) return
-
-      allocate(buf(idx_north-idx_south+1))
-      buf(:) = lat(idx_south:idx_north)
-
-      deallocate(lat)
-      allocate(lat(idx_south:idx_north))
-
-      lat(:) = buf(:)
-   
-   end subroutine resize_latitude
-
-
-   subroutine set_is_on_west_edge(is_on_west_edge)
-      implicit none
-      logical, intent(out) :: is_on_west_edge(:,:)
-
-      is_on_west_edge(:, :) = .false.
-
-      is_on_west_edge(1, :) = .true.
-
-   end subroutine set_is_on_west_edge
-
-
-   subroutine set_is_on_east_edge(is_on_east_edge)
-      implicit none
-      logical, intent(out) :: is_on_east_edge(:,:)
-
-      is_on_east_edge(:, :) = .false.
-
-      is_on_east_edge(size(is_on_east_edge, dim=1), :) = .true.
-
-   end subroutine set_is_on_east_edge
-
-
-   subroutine set_is_on_south_edge(is_on_south_edge)
-      implicit none
-      
-      logical, intent(out) :: is_on_south_edge(:,:)
-
-      is_on_south_edge(:, :) = .false.
-
-       ! 配列の上が南の順番になっているので、このマスクは最初の行が南端
-      is_on_south_edge(:, 1) = .true.
-
-   end subroutine set_is_on_south_edge
-
-
-   subroutine set_is_on_north_edge(is_on_north_edge)
-      implicit none
-      
-      logical, intent(out) :: is_on_north_edge(:, :)
-
-      is_on_north_edge(:, :) = .false.
-
-      ! 配列の上が南の順番になっているので、このマスクは最後の行が北端
-      is_on_north_edge(:, size(is_on_north_edge, dim=2)) = .true.
-
-   end subroutine set_is_on_north_edge
-
-    
-   subroutine triming_west_east(array, idx_w, idx_e)
-      implicit none
-      integer(int16), allocatable, intent(inout) :: array(:,:)
-      integer(int32), intent(in) :: idx_w, idx_e
-
-      integer(int16), allocatable :: buff(:, :)
-      integer(int32) :: ny
-
-      ny = size(array, dim=2)
-
-      allocate(buff(idx_e-idx_w+1, ny))
-
-      buff(:,:) = array(idx_w:idx_e, :)
-
-      deallocate(array)
-      allocate(array(idx_e-idx_w+1, ny))
-      array(:,:) = buff(:, :)
-   end subroutine triming_west_east
-
-
-   subroutine triming_west (array, idx_w)
-      implicit none
-      integer(int16), allocatable, intent(inout) :: array(:, :)
-      integer(int32), intent(in) :: idx_w
-
-      integer(int16), allocatable :: buff(:, :)
-      integer(int32) :: nx, ny
-
-      nx = size(array, dim=1)
-      ny = size(array, dim=2)
-
-      allocate(buff(nx-idx_w+1, ny))
-
-      buff(:, :) = array(idx_w:nx, :)
-
-      deallocate(array)
-      allocate(array(nx-idx_w+1, ny))
-
-      array(:,:) = buff(:, :)
-
-   end subroutine triming_west
-
-
-   subroutine triming_east (array, idx_e)
-      implicit none
-      integer(int16), allocatable, intent(inout) :: array(:,:)
-      integer(int32), intent(in) :: idx_e
-
-      integer(int16), allocatable :: buff(:,:)
-      integer(int32) :: ny
-
-      ny = size(array, dim=2)
-
-      allocate(buff(idx_e, ny))
-
-      buff(:,:) = array(1:idx_e, :)
-
-      deallocate(array)
-      allocate(array(idx_e, ny))
-
-      array(:,:) = buff(:,:)
-   end subroutine triming_east 
-
-   
-   subroutine triming_south_north(array, idx_s, idx_n)
-      implicit none
-      integer(int16), allocatable, intent(inout) :: array(:, :)
-      integer(int32), intent(in) :: idx_s, idx_n
-
-      integer(int16), allocatable :: buff(:, :)
-      integer(int32) :: nx
-
-      nx = size(array, dim=1)
-
-      allocate(buff(nx, idx_n-idx_s+1))
-
-      buff(:,:) = array(:, idx_s:idx_n)
-
-      deallocate(array)
-      allocate(array(nx, idx_n-idx_s+1))
-
-      array(:, :) = buff(:, :)
-
-   end subroutine triming_south_north 
-
-
-   subroutine triming_south(array, idx_s)
-      implicit none
-      integer(int16), allocatable, intent(inout) :: array(:,:)
-      integer(int32), intent(in) :: idx_s
-
-      integer(int16), allocatable :: buff(:,:)
-      integer(int32) :: nx, ny
-
-      nx = size(array, dim=1)
-      ny = size(array, dim=2)
-
-      allocate(buff(nx, ny-idx_s+1))
-
-      buff(:, :) = array(:, 1:ny-idx_s+1)
-
-      deallocate(array)
-      allocate(array(nx, ny-idx_s+1))
-
-      array(:,:) = buff(:,:)
-
-   end subroutine triming_south
-
-
-   subroutine triming_north(array, idx_n)
-      implicit none
-      integer(int16), allocatable, intent(inout) :: array(:,:)
-      integer(int32), intent(in) :: idx_n
-
-      integer(int16), allocatable :: buff(:,:)
-      integer(int32) :: nx, ny
-
-      nx = size(array, dim=1)
-
-      allocate(buff(nx, idx_n))
-
-      buff(:, :) = array(:, 1:idx_n)
-
-      deallocate(array)
-      allocate(array(nx, idx_n))
-
-      array(:,:) = buff(:,:)
-
-   end subroutine triming_north
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 end program main
