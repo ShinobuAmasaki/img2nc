@@ -99,7 +99,7 @@ $ fpm build --compiler mpif90 \
 	 --link-flag "-L/lib/x86_64-linux-gnu"
 ```
 
-## 使い方
+## 使い方（月面、SLDEM2013）
 例として、月の表面に位置するLambartクレーター (西経21度, 北緯26度)を描いてみる。
 
 ### DEMデータをダウンロード
@@ -136,7 +136,7 @@ $ img2nc -d dat -o out.nc -r 338/341/24/27
 $ mpiexec -n 9 img2nc -d dat -o out.nc -r 338/341/24/27
 ```
 
-プロセス数を`-n`または`-np`オプションで指定する。ただしプロセス数は読み込むファイルの数（SLDEM2013では経度と緯度のそれぞれの幅の積）よりも小さくすること。
+プロセス数を`-n`または`-np`オプションで指定する。ただしプロセス数は読み込むファイルの数（SLDEM2013では経度と緯度のそれぞれの幅の積）よりも小さくすること。上の例では、最大$3 \times 3 = 9$ プロセスで並列入出力が可能である。
 
 
 ### 描画
@@ -158,12 +158,34 @@ gmt end
 このシェルスクリプトを実行すると、冒頭の画像ファイル(`lambert.png`)が出力される。
 GMTの使い方については [GMT Documentation](https://docs.generic-mapping-tools.org/latest/) を参照のこと。
 
+# 使い方（火星、MOLA-MEGDR）
+
+バージョン3.1より、火星のDEMもサポートしている。基本的な使い方は月面の場合と同じであるが、こちらは`img2nc-mola`コマンドを使用する。このセクションでは、火星の全球をメルカトル図法で描画するまでの方法について見てみよう。
+
+DEMのダウンロードには`dl_mola-megdr.sh`スクリプトを使用できる。MOLA-MEGDR(meg128)は全球が16の領域に分割されている。バージョン3.1時点のスクリプトでは全件ダウンロードのみが実行可能である。
+```
+./dl_mola-megdr.sh -d mola-megdr
+```
+
+16並列でNetCDFファイルの書き出しを実行する。なお、`-p`オプションで経緯度1度当たりのピクセル数で解像度を指定することが可能である。
+```
+$ mpiexec -n 16 img2nc-mola -d mola-megdr -o mola.nc -p 16 -180/180/-88/88
+```
+
+scriptディレクトリの`mars-global-mercator.sh`を実行すると、GMTを使用して上で出力された`mola.nc`を、メルカトル図法で以下のような画像に出力することができる。
+```
+./script/mars-global-mercator.sh
+```
+
+![Mars-global](https://github.com/ShinobuAmasaki/img2nc/blob/d64e171d2bb1ebde617e00c03fc34523bf31dc6e/mars-global.png?raw=true)
+
+
 
 ## Future works
 将来、以下の機能を実装する予定である。
 
 - ✅ 粗視化処理（バージョン2）
-- 一度当たりの解像度を指定するオプション
+- ✅ 一度当たりの解像度を指定するオプション
 - ✅ Intelコンパイラによるビルド（バージョン2）
 - ✅ 並列処理（バージョン2）
 - ✅ 出力の並列化（バージョン3）
