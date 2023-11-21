@@ -6,10 +6,10 @@ type emerge 2>&1 >/dev/null && shopt -s expand_aliases && alias gmt='gmt6'
 nc='mola.nc'
 range='-180/180/-70/70'
 grad="grad.nc"
-dpi=250
+dpi=100
 
 gmt set PROJ_ELLIPSOID = Mars
-gmt begin out png
+gmt begin mars-global png
    gmt basemap -JM16i -R$range -Bafg -BWeSn
    gmt makecpt -Ccopper -T-24000/32000/1000 -Z
 
