@@ -124,7 +124,7 @@ Execute `img2nc` with `mpiexec`.
 $ mpiexec -n 9 img2nc -d ./dat -o out.nc -r 339/341/24/27
 ```
 
-Specify the number of processor elements with `-n` or `-np` option which must be less than or equal to the longitude width.
+Specify the number of processor elements with `-n` or `-np` option which must be less than or equal to the product of longitude width and latitude width. For example in the above range specification, $(341 - 339) \times (27 - 24) = 3 \times 3 = 9$.
 
 
 ### Drawing
@@ -146,21 +146,50 @@ gmt end
 Executing this shell script, the beginning figure `lambert.png` is outputted.
 See [GMT Documentation](https://docs.generic-mapping-tools.org/latest/) on how to use GMT.
 
+## Usage - Mars: MOLA-MEGDR
 
+Since version 3.1, support for Mars DEM has been introduced.
+The basic usage is similar to that of lunar data, but in this case, the `img2nc-mola` command is used.
+
+This section will guide you through the process of visualizing the entire globe of Mars in Mercator projection.
+
+To download the DEM, you can use the `dl_mola-megdr.sh` script. The MOLA-MEGDR(meg128) dataset
+divides the global map into 16 regions. As of version 3.1, the script allows downloading the entire dataset only:
+
+```
+$ ./dl_mola-megdr.sh -d mola-megdr
+```
+
+Execute the NetCDF file creation in parallel using 16 processes.
+Note that the `-p` option allows you to specify the resolution in pixels per degree for latitude and longitude:
+
+```
+$ mpiexec -n 16 img2nc-mola -d mola-megdr -o mola.nc -p 16 -180/180/-88/88
+```
+
+By running the `mars-global-mercator.sh` script in the `script` directory, you can use GMT to generate an image in Mercator projection based on the previousely created `mola.nc` file:
+
+```
+./script/mars-global-mercator.sh
+```
+
+These steps will produce an image representing the entire Mars globe:
+
+![Mars-globe](https://github.com/ShinobuAmasaki/img2nc/blob/d64e171d2bb1ebde617e00c03fc34523bf31dc6e/mars-global.png?raw=true)
 
 ## Future works
 In the future, we would like to implement the following feature:
 
 - ✅ Coarse vision
-- Specifying Resolution per Degree
+- ✅ Specifying Resolution per Degree
 - ✅ Support Intel Fortran Compiler
 - ✅ Parallel processing
 - ✅ Parallel I/O (MPI I/O based)
 - ✅ High Degree of Parallelization
 - ✅ Negative Longitude
-- Asynchronous I/O
 - ✅ Support MOLA data (Mars DEM)
 - ✅ Trimming (for MOLA only)
+- Asynchronous I/O
 
 [^1]: Digital Elevation Model（数値標高地図）
 [^2]: [Institute of Space and Astronautical Science, Japan Aerospace Exploration Agency - 宇宙航空研究開発機構　宇宙科学研究所](https://www.isas.jaxa.jp/)
