@@ -21,7 +21,8 @@ program main
    character(len=MAX_NAME_LEN) :: outnc
    character(len=MAX_RANGE_LEN) :: range
 
-   character(8), parameter :: DEFAULT_OUT = './out.nc'
+   character(len=MAX_NAME_LEN), parameter :: DEFAULT_OUT = './out.nc'
+   character(len=MAX_NAME_LEN), parameter :: DEFAULT_DAT = './sldem2013'
 
    type(boundary) :: edge
    integer(int32) :: coarse
@@ -60,14 +61,18 @@ program main
    call mpi_initialize(ierr)
 
 !---------------------------------------------------------------------!
-   ! Validate command line arguments. 
-   call default(data_dir, outnc, coarse, edge)
+!== Initialize
+   data_dir = ''
+   filename = ''
+   outnc = ''
 
+   ! Validate command line arguments. 
    ! Read parameter from command line arguments. 
    call preprocess(data_dir, outnc, range, coarse, edge, resolution_default=SLDEM2013_PPD_MAX/16, ppd_max=SLDEM2013_PPD_MAX)
    
-   if (trim(outnc) == '') outnc = DEFAULT_OUT
+   call default(data_dir, outnc)
 
+!== Allocation
    ! 入力処理用の名簿を作成する。
    call allocate_lists(edge, file_list, distri_1d, distri_2d, distri_logical)
    call create_name_list(data_dir, edge, file_list)
@@ -250,20 +255,12 @@ program main
    
 contains
 
-   subroutine default(data_dir, outnc, coarse, edge)
+   subroutine default(data_dir, outnc)
       implicit none
       character(*), intent(inout) :: data_dir, outnc
-      type(boundary), intent(out) :: edge
-      integer(int32) :: coarse
 
-      coarse = 16
-      outnc = DEFAULT_OUT
-      data_dir = './sldem2013'
-
-      call edge%set_east(4)
-      call edge%set_west(-4)
-      call edge%set_south(-4)
-      call edge%set_north(4)
+      if (trim(outnc) == '') outnc = DEFAULT_OUT
+      if (trim(data_dir) == '') data_dir = DEFAULT_DAT
 
    end subroutine default     
 

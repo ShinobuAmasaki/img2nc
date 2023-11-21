@@ -14,7 +14,8 @@ program main
    character(len=MAX_NAME_LEN) :: outnc
    character(len=MAX_RANGE_LEN) :: range
 
-   character(len=MAX_NAME_LEN) :: DEFAULT_OUT = './mola.nc'
+   character(len=MAX_NAME_LEN), parameter :: DEFAULT_OUT = './mola.nc'
+   character(len=MAX_NAME_LEN), parameter :: DEFAULT_DAT = './mola-megdr'
 
    integer(int32), allocatable :: distri_1d(:), distri_2d(:,:)
    logical, allocatable :: distri_logical(:, :)
@@ -57,15 +58,17 @@ program main
 
    call mpi_initialize(ierr)
    
-  
+!== Initialize
+   data_dir = ''
+   filename = ''
+   outnc = ''
+
 
    call preprocess(data_dir, outnc, range, coarse, edge, resolution_default=MOLA_MEG128_PPD_MAX, ppd_max=MOLA_MEG128_PPD_MAX)
-
-
    outline = outline_mola(edge)
-
-   if (trim(outnc) == '') outnc = DEFAULT_OUT
    call default(data_dir, outnc)
+
+!== Allocation
 
    call allocate_lists(outline, file_list, distri_1d, distri_2d, distri_logical)
 
@@ -97,7 +100,6 @@ program main
          ! inquire(file=file_list(i,j), exist=isExist)
       end do
    end do
-
 
    block
       n_jobs_total = numlon*numlat
@@ -404,7 +406,7 @@ contains
       character(*), intent(inout) :: data_dir, outnc
 
       if (trim(outnc) == '')    outnc = DEFAULT_OUT
-      if (trim(data_dir) == '') data_dir = './mola-megdr'
+      if (trim(data_dir) == '') data_dir = DEFAULT_DAT
 
    end subroutine default
 
