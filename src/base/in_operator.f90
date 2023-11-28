@@ -69,7 +69,7 @@ contains
 
       ! index_tableを走査する
       i = 1
-      do while (i <= len(target_) - keyLen)
+      do while (i <= len(target_) - keyLen+1)
 
          ! テーブルのフラグが真の場合、
          if (index_table(i)) then
